@@ -2,8 +2,6 @@ import os
 from anthropic import AsyncAnthropic
 from .collector import NewsEntry
 
-client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
-
 SYSTEM_PROMPT = """
 あなたはプロのラジオパーソナリティです。
 提供されたニュース一覧をもとに、聴取者が朝の通勤・家事中に聴ける、
@@ -27,17 +25,27 @@ SYSTEM_PROMPT = """
 """
 
 
-async def generate_script(news_items: list[NewsEntry], date_str: str) -> str:
+async def generate_script(
+    news_items: list[NewsEntry],
+    date_str: str,
+    api_key: str | None = None,
+    custom_prompt: str | None = None,
+) -> str:
+    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    client = AsyncAnthropic(api_key=key)
+
     news_text = "\n\n".join([
         f"【{item.category}】{item.source}\nタイトル: {item.title}\n概要: {item.summary}"
         for item in news_items
     ])
 
+    extra = f"\n\n【ユーザーからの追加指示】\n{custom_prompt}" if custom_prompt else ""
+
     user_message = f"""
 今日の日付: {date_str}
 ニュース件数: {len(news_items)}件
 
-以下のニュースをもとにラジオ原稿を作成してください。
+以下のニュースをもとにラジオ原稿を作成してください。{extra}
 
 {news_text}
 """

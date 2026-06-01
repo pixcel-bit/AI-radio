@@ -4,31 +4,33 @@ from pathlib import Path
 
 from .config import AUDIO_DIR
 
-TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "gtts").lower()
+TTS_PROVIDER_DEFAULT = os.environ.get("TTS_PROVIDER", "gtts").lower()
 
 
-async def synthesize(script: str, date_str: str) -> str:
+async def synthesize(script: str, filename_stem: str, tts_provider: str | None = None, api_key: str | None = None) -> str:
     """スクリプトを音声合成してMP3の絶対パスを返す"""
     AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = AUDIO_DIR / f"{date_str}.mp3"
+    output_path = AUDIO_DIR / f"{filename_stem}.mp3"
+    provider = (tts_provider or TTS_PROVIDER_DEFAULT).lower()
 
-    if TTS_PROVIDER == "openai":
-        await _synthesize_openai(script, output_path)
+    if provider == "openai":
+        openai_key = api_key or os.environ.get("OPENAI_API_KEY", "")
+        await _synthesize_openai(script, output_path, openai_key)
     else:
         await _synthesize_gtts(script, output_path)
 
     return str(output_path)
 
 
-async def _synthesize_openai(script: str, output_path: Path):
+async def _synthesize_openai(script: str, output_path: Path, api_key: str):
     from openai import AsyncOpenAI
-    openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+    client = AsyncOpenAI(api_key=api_key)
 
     chunks = _split_text(script, max_chars=4000)
     audio_segments: list[bytes] = []
 
     for chunk in chunks:
-        response = await openai_client.audio.speech.create(
+        response = await client.audio.speech.create(
             model="tts-1",
             voice="nova",
             input=chunk,
