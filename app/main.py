@@ -1,6 +1,6 @@
 import os
 import asyncio
-from datetime import datetime, date
+from datetime import date
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,14 +12,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from .config import AUDIO_DIR, STATIC_DIR
 from .database import init_db, get_session, Broadcast, NewsItem
 from .collector import fetch_news
 from .script_gen import generate_script
 from .tts import synthesize
 from .scheduler import start_scheduler
 
+# StaticFiles のマウント前にディレクトリを確実に作成
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+
 _generation_lock = asyncio.Lock()
-_generation_status: dict[str, str] = {}  # date -> "running" | "done" | "error"
+_generation_status: dict[str, str] = {}
 
 
 @asynccontextmanager
@@ -38,8 +42,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/audio", StaticFiles(directory="audio"), name="audio")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/audio", StaticFiles(directory=str(AUDIO_DIR)), name="audio")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 async def run_daily_broadcast(target_date: str | None = None):
@@ -108,7 +112,7 @@ async def run_daily_broadcast(target_date: str | None = None):
 
 @app.get("/")
 async def index():
-    return FileResponse("static/index.html")
+    return FileResponse(str(STATIC_DIR / "index.html"))
 
 
 @app.get("/api/broadcasts")
@@ -145,11 +149,12 @@ async def get_broadcast(date_str: str):
             .all()
         )
 
+        audio_file = AUDIO_DIR / f"{date_str}.mp3"
         return {
             "date": broadcast.date,
             "script": broadcast.script,
             "news_count": broadcast.news_count,
-            "audio_url": f"/audio/{date_str}.mp3" if broadcast.audio_path and Path(broadcast.audio_path).exists() else None,
+            "audio_url": f"/audio/{date_str}.mp3" if audio_file.exists() else None,
             "created_at": broadcast.created_at.isoformat(),
             "news_items": [
                 {
@@ -167,9 +172,8 @@ async def get_broadcast(date_str: str):
 @app.post("/api/generate")
 async def trigger_generation(background_tasks: BackgroundTasks, target_date: str | None = None):
     date_str = target_date or date.today().isoformat()
-    status = _generation_status.get(date_str)
 
-    if status == "running":
+    if _generation_status.get(date_str) == "running":
         return JSONResponse({"status": "running", "date": date_str})
 
     background_tasks.add_task(run_daily_broadcast, date_str)

@@ -2,7 +2,9 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean
 from sqlalchemy.orm import DeclarativeBase, Session
 
-engine = create_engine("sqlite:///./news_radio.db", connect_args={"check_same_thread": False})
+from .config import DB_URL
+
+engine = create_engine(DB_URL, connect_args={"check_same_thread": False})
 
 
 class Base(DeclarativeBase):

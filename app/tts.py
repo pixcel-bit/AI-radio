@@ -2,16 +2,15 @@ import os
 import asyncio
 from pathlib import Path
 
-AUDIO_DIR = Path("audio")
-AUDIO_DIR.mkdir(exist_ok=True)
+from .config import AUDIO_DIR
 
 TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "gtts").lower()
 
 
 async def synthesize(script: str, date_str: str) -> str:
-    """スクリプトを音声合成してMP3パスを返す"""
-    filename = f"{date_str}.mp3"
-    output_path = AUDIO_DIR / filename
+    """スクリプトを音声合成してMP3の絶対パスを返す"""
+    AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    output_path = AUDIO_DIR / f"{date_str}.mp3"
 
     if TTS_PROVIDER == "openai":
         await _synthesize_openai(script, output_path)
@@ -25,14 +24,13 @@ async def _synthesize_openai(script: str, output_path: Path):
     from openai import AsyncOpenAI
     openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
-    # OpenAI TTS は1リクエスト4096文字制限のため分割処理
     chunks = _split_text(script, max_chars=4000)
     audio_segments: list[bytes] = []
 
     for chunk in chunks:
         response = await openai_client.audio.speech.create(
             model="tts-1",
-            voice="nova",  # 女性ナレーター風
+            voice="nova",
             input=chunk,
             response_format="mp3",
         )
@@ -45,7 +43,7 @@ async def _synthesize_openai(script: str, output_path: Path):
 
 async def _synthesize_gtts(script: str, output_path: Path):
     from gtts import gTTS
-    # gTTS は同期処理なので別スレッドで実行
+
     def _run():
         tts = gTTS(text=script, lang="ja", slow=False)
         tts.save(str(output_path))
@@ -55,7 +53,6 @@ async def _synthesize_gtts(script: str, output_path: Path):
 
 
 def _split_text(text: str, max_chars: int) -> list[str]:
-    """文単位で分割して最大文字数を超えないチャンクに"""
     sentences = text.replace("。", "。\n").split("\n")
     chunks, current = [], ""
     for sentence in sentences:
