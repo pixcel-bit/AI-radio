@@ -402,6 +402,9 @@ function showDeepDiveModal(newsIdx) {
         </div>
       </div>
     `;
+    modal.onclick = (e) => {
+      if (e.target === modal) closeDeepDiveModal();
+    };
     document.body.appendChild(modal);
   } else {
     modal.querySelector('h3').textContent = `「${escHtml(title)}」を深掘り`;
