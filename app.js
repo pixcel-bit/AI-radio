@@ -15,14 +15,15 @@ const S = {
 
   get settings() {
     return LS.getJSON('nr_settings', {
-      categories:      ['総合'],
-      maxItems:        15,
-      focusKeywords:   '',
-      excludeKeywords: '',
-      length:          'standard',
-      tone:            'casual',
-      speechRate:      1.0,
-      customIntro:     '',
+      categories:       ['総合', '政治', '経済', '国際', '科学・文化', 'テクノロジー'],
+      customCategories: [],
+      maxItems:         15,
+      focusKeywords:    '',
+      excludeKeywords:  '',
+      length:           'standard',
+      tone:             'casual',
+      speechRate:       1.0,
+      customIntro:      '',
     });
   },
   saveSettings(cfg) { LS.setJSON('nr_settings', cfg); },
@@ -159,12 +160,15 @@ async function generateScript(items, cfg) {
   const lengthMap = { short: '約3分（400字程度）', standard: '約5分（800字程度）', long: '約10分（1600字程度）' };
   const toneMap   = { casual: 'カジュアルで親しみやすい', professional: '落ち着いたプロフェッショナルな', cheerful: '元気で明るい朝らしい' };
 
-  const intro = cfg.customIntro ? `冒頭に必ず次の文を入れてください: 「${cfg.customIntro}」\n\n` : '';
+  const intro      = cfg.customIntro ? `冒頭に必ず次の文を入れてください: 「${cfg.customIntro}」\n\n` : '';
+  const customCats = (cfg.customCategories || []).filter(Boolean);
+  const customLine = customCats.length ? `- カスタムテーマ（以下のトピックを優先して取り上げてください）: ${customCats.join('、')}\n` : '';
 
   const system = `あなたはプロのラジオパーソナリティです。
 以下のニュース情報をもとに、${lengthMap[cfg.length] || lengthMap.standard}のラジオ放送原稿を作成してください。
 トーンは${toneMap[cfg.tone] || toneMap.casual}口調です。
 ${intro}ルール:
+${customLine}
 - です・ます調で自然な話し言葉
 - 難しい用語は噛み砕いて説明
 - 出力は原稿テキストのみ（見出し・箇条書き・記号・マークダウン不要）
@@ -226,8 +230,9 @@ function showPlayer(broadcast, isYesterday = false) {
         <span class="news-cat">${escHtml(item.category || '')}</span>
         <span class="news-src">${escHtml(item.source || '')}</span>
       </div>
-      <div class="news-title"><a href="${escHtml(item.url || '#')}" target="_blank" rel="noopener">${escHtml(item.title || '')}</a></div>
-      <div class="news-summary">${escHtml(item.summary || '')}</div>`;
+      <div class="news-title">${escHtml(item.title || '')}</div>
+      <div class="news-summary">${escHtml(item.summary || '')}</div>
+      ${item.url ? `<a class="news-source-link" href="${escHtml(item.url)}" target="_blank" rel="noopener">元記事を読む →</a>` : ''}`;
     list.appendChild(li);
   });
 }
@@ -520,6 +525,7 @@ function populateSettings() {
   $('setting-intro').value   = cfg.customIntro     || '';
   populateVoiceSelector();
   if (cfg.voiceName) $('setting-voice').value = cfg.voiceName;
+  renderCustomCategories();
 }
 
 function saveSettings() {
@@ -527,15 +533,16 @@ function saveSettings() {
   if (key) S.apiKey = key;
 
   S.saveSettings({
-    categories:      [...document.querySelectorAll('.cat-checks input:checked')].map(cb => cb.value),
-    maxItems:        parseInt($('setting-max').value, 10),
-    focusKeywords:   $('setting-focus').value.trim(),
-    excludeKeywords: $('setting-exclude').value.trim(),
-    length:          $('setting-length').value,
-    tone:            $('setting-tone').value,
-    speechRate:      parseFloat($('setting-rate').value),
-    customIntro:     $('setting-intro').value.trim(),
-    voiceName:       $('setting-voice').value,
+    categories:       [...document.querySelectorAll('.cat-checks input:checked')].map(cb => cb.value),
+    customCategories: (S.settings.customCategories || []),
+    maxItems:         parseInt($('setting-max').value, 10),
+    focusKeywords:    $('setting-focus').value.trim(),
+    excludeKeywords:  $('setting-exclude').value.trim(),
+    length:           $('setting-length').value,
+    tone:             $('setting-tone').value,
+    speechRate:       parseFloat($('setting-rate').value),
+    customIntro:      $('setting-intro').value.trim(),
+    voiceName:        $('setting-voice').value,
   });
 
   showToast('設定を保存しました ✓');
@@ -612,6 +619,42 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ─── カスタムカテゴリ ─────────────────────────────────────────────────────
+function renderCustomCategories() {
+  const container = $('custom-cat-list');
+  if (!container) return;
+  const custom = S.settings.customCategories || [];
+  container.innerHTML = '';
+  custom.forEach(name => {
+    const tag = document.createElement('span');
+    tag.className = 'cat-tag';
+    tag.innerHTML = `${escHtml(name)}<button class="cat-tag-remove" onclick="removeCustomCategory('${escHtml(name).replace(/'/g, "\\'")}')">✕</button>`;
+    container.appendChild(tag);
+  });
+}
+
+function addCustomCategory() {
+  const input = $('new-cat-input');
+  const name  = input.value.trim();
+  if (!name) return;
+  const cfg    = S.settings;
+  const custom = cfg.customCategories || [];
+  if (!custom.includes(name)) {
+    custom.push(name);
+    cfg.customCategories = custom;
+    S.saveSettings(cfg);
+  }
+  input.value = '';
+  renderCustomCategories();
+}
+
+function removeCustomCategory(name) {
+  const cfg = S.settings;
+  cfg.customCategories = (cfg.customCategories || []).filter(c => c !== name);
+  S.saveSettings(cfg);
+  renderCustomCategories();
 }
 
 // ─── 音声リスト ───────────────────────────────────────────────────────────

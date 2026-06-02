@@ -82,7 +82,7 @@
             <button class="speed-btn" onclick="setMainSpeed(1.5,this)">1.5x</button>
           </div>
         </div>
-        <details class="news-detail">
+        <details class="news-detail" open>
           <summary>今日のニュース一覧</summary>
           <ul class="news-list" id="home-news-list"></ul>
         </details>
@@ -151,6 +151,15 @@
             <label class="cat-check"><input type="checkbox" value="国際"       >国際</label>
             <label class="cat-check"><input type="checkbox" value="科学・文化" >科学</label>
             <label class="cat-check"><input type="checkbox" value="テクノロジー">テクノロジー</label>
+          </div>
+          <div>
+            <span class="cat-custom-label">カスタムカテゴリ <small>（Claude への追加テーマ指示）</small></span>
+            <div id="custom-cat-list" class="cat-checks" style="margin-top:6px;min-height:28px"></div>
+            <div class="custom-cat-add">
+              <input type="text" id="new-cat-input" placeholder="例: スポーツ、エンタメ、育児" maxlength="20"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomCategory()}">
+              <button type="button" class="btn-add-cat" onclick="addCustomCategory()">＋追加</button>
+            </div>
           </div>
         </section>
 

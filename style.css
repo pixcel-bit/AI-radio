@@ -300,6 +300,17 @@ details[open] .news-detail summary::before,
 
 .news-summary { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
+.news-source-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--accent2);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.news-source-link:active { border-color: var(--accent2); }
+
 .script-text {
   padding: 0 16px 16px;
   font-size: 13px;
@@ -892,6 +903,73 @@ details[open] .news-detail summary::before,
   border-color: var(--accent);
   color: white;
 }
+
+/* カスタムカテゴリタグ */
+.cat-custom-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  display: block;
+  margin-top: 14px;
+}
+.cat-custom-label small { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+
+.cat-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent);
+  color: white;
+  border-radius: 20px;
+  padding: 4px 8px 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cat-tag-remove {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+.cat-tag-remove:active { color: white; }
+
+.custom-cat-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.custom-cat-add input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+.custom-cat-add input:focus { border-color: var(--accent); }
+
+.btn-add-cat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.btn-add-cat:active { border-color: var(--accent); color: var(--accent); }
 
 /* ── レンジスライダー ── */
 .range-row {
