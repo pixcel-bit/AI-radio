@@ -88,7 +88,7 @@ function parseRSS(xmlText, source, category) {
       source,
       category,
       pub_date: item.querySelector('pubDate')?.textContent?.trim() || '',
-      feedRank: idx,
+      feedRank: idx, // フィード内順位（0が最重要）
     };
   }).filter(n => n.title);
 }
@@ -113,7 +113,7 @@ async function fetchAllRSS() {
 
 function $(id) { return document.getElementById(id); }
 
-// ─── グッド・好み分析 ──────────────────────────────────────────────────────
+// ─── グッド・好み分析 ────────────────────────────────────────────────────────
 function getLikedNews() {
   return LS.getJSON('nr_liked_news', []);
 }
@@ -161,12 +161,14 @@ function scoreItemByPrefs(item, prefs) {
 // クロスソースマップ：同じ話題を複数ソースが報じているか検出
 function buildCrossSourceMap(allItems) {
   const getWords = title => (title.match(/[一-鿿゠-ヿ]{2,}/g) || []);
+  // 単語 → アイテムリスト の逆引きインデックス
   const wordIndex = {};
   for (const item of allItems) {
     for (const w of getWords(item.title)) {
       (wordIndex[w] = wordIndex[w] || []).push(item);
     }
   }
+  // 各アイテムについて、別ソースで同話題を報じている数を数える
   const map = {};
   for (const item of allItems) {
     const otherSources = new Set();
@@ -185,7 +187,7 @@ function buildCrossSourceMap(allItems) {
 // 記事の総合重要度スコア
 function computeScore(item, prefs, crossSourceMap) {
   let score = 0;
-  // フィード内順位（0位=最重要で最大10点）
+  // フィード内順位（上位ほど重要。0位=最重要で最大10点）
   score += Math.max(0, 10 - (item.feedRank || 0)) * 1.5;
   // クロスソース（複数メディアが同話題を報じると+8点/ソース）
   score += (crossSourceMap[item.title] || 0) * 8;
@@ -330,16 +332,13 @@ async function loadToday() {
       if (excl.length) items = items.filter(n => !excl.some(kw => n.title.includes(kw) || (n.summary || '').includes(kw)));
     }
 
-    // 優先キーワード（スコアブースト）
-    let focusBoost = new Set();
+    // 優先キーワード（先頭へ）
     if (cfg.focusKeywords) {
       const focus = cfg.focusKeywords.split(',').map(s => s.trim()).filter(Boolean);
       if (focus.length) {
-        items.forEach(n => {
-          if (focus.some(kw => n.title.includes(kw) || (n.summary || '').includes(kw))) {
-            focusBoost.add(n.title);
-          }
-        });
+        const hi = items.filter(n =>  focus.some(kw => n.title.includes(kw) || (n.summary || '').includes(kw)));
+        const lo = items.filter(n => !focus.some(kw => n.title.includes(kw) || (n.summary || '').includes(kw)));
+        items = [...hi, ...lo];
       }
     }
 
@@ -350,10 +349,7 @@ async function loadToday() {
 
     // 全アイテムをスコア付きでソート
     const scored = items
-      .map(item => ({
-        ...item,
-        _score: computeScore(item, prefs, crossSourceMap) + (focusBoost.has(item.title) ? 20 : 0),
-      }))
+      .map(item => ({ ...item, _score: computeScore(item, prefs, crossSourceMap) }))
       .sort((a, b) => b._score - a._score);
 
     // 第1パス：各カテゴリから最高スコアを1件ずつ確保（多様性保証）
