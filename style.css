@@ -1188,3 +1188,57 @@ details[open] .news-detail summary::before,
   line-height: 1.6;
   padding: 8px 0;
 }
+
+/* グッドボタン */
+.like-btn {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.like-btn.liked {
+  background: #4caf5022;
+  color: #4caf50;
+  opacity: 0.7;
+  cursor: default;
+}
+
+.like-form {
+  margin-top: 10px;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #4caf50;
+}
+
+.like-reason {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  resize: none;
+  font-family: inherit;
+  outline: none;
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+.like-reason::placeholder {
+  color: var(--text-muted);
+}
+
+.like-submit-btn {
+  margin-top: 8px;
+  padding: 6px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.like-submit-btn:active {
+  opacity: 0.8;
+}

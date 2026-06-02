@@ -112,6 +112,113 @@ async function fetchAllRSS() {
 
 function $(id) { return document.getElementById(id); }
 
+// ─── グッド・好み分析 ────────────────────────────────────────────────────────
+function getLikedNews() {
+  return LS.getJSON('nr_liked_news', []);
+}
+
+function getPreferences() {
+  const liked = getLikedNews();
+  if (!liked.length) return null;
+
+  const catCount = {};
+  for (const item of liked) {
+    catCount[item.category] = (catCount[item.category] || 0) + 1;
+  }
+
+  const text = liked.map(l => `${l.title} ${l.summary || ''} ${l.reason || ''}`).join(' ');
+  const words = text.match(/[一-鿿゠-ヿ]{2,}/g) || [];
+  const stopWords = new Set(['ニュース', 'について', 'として', 'による', 'ために', 'こと', 'もの', 'それ', 'これ', 'その', 'どの', 'ある', 'いる', 'する', 'なる']);
+  const wordCount = {};
+  for (const w of words) {
+    if (!stopWords.has(w)) wordCount[w] = (wordCount[w] || 0) + 1;
+  }
+
+  const topKeywords = Object.entries(wordCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([w]) => w);
+
+  const topCategories = Object.entries(catCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([c]) => c);
+
+  return { topCategories, topKeywords, catCount, total: liked.length };
+}
+
+function scoreItemByPrefs(item, prefs) {
+  if (!prefs) return 0;
+  let score = (prefs.catCount[item.category] || 0) * 3;
+  const text = `${item.title} ${item.summary || ''}`;
+  for (const kw of prefs.topKeywords) {
+    if (text.includes(kw)) score += 2;
+  }
+  return score;
+}
+
+function likeNews(idx) {
+  const broadcast = LS.getJSON(`nr_broadcast_${todayStr()}`);
+  if (!broadcast || !broadcast.news_items || !broadcast.news_items[idx]) return;
+
+  const li = document.querySelector(`[data-news-index="${idx}"]`);
+  if (!li) return;
+
+  const item = broadcast.news_items[idx];
+  if (getLikedNews().some(l => l.title === item.title)) {
+    showToast('すでにグッドしています');
+    return;
+  }
+
+  let form = li.querySelector('.like-form');
+  if (form) { form.remove(); return; }
+
+  form = document.createElement('div');
+  form.className = 'like-form';
+  form.innerHTML = `
+    <textarea class="like-reason" placeholder="なぜ良かったですか？（任意・好みの分析に使われます）" rows="2"></textarea>
+    <button class="like-submit-btn" onclick="submitLike(${idx}, this)">👍 グッドを送信</button>
+  `;
+  li.appendChild(form);
+  form.querySelector('.like-reason').focus();
+}
+
+function submitLike(idx, btn) {
+  const broadcast = LS.getJSON(`nr_broadcast_${todayStr()}`);
+  if (!broadcast || !broadcast.news_items || !broadcast.news_items[idx]) return;
+
+  const item = broadcast.news_items[idx];
+  const form = btn.closest('.like-form');
+  const reason = form.querySelector('.like-reason').value.trim();
+
+  const liked = getLikedNews();
+  if (liked.some(l => l.title === item.title)) {
+    showToast('すでにグッドしています');
+    form.remove();
+    return;
+  }
+
+  liked.unshift({
+    date: todayStr(),
+    category: item.category,
+    title: item.title,
+    summary: (item.summary || '').slice(0, 100),
+    reason,
+    liked_at: new Date().toISOString(),
+  });
+  LS.setJSON('nr_liked_news', liked.slice(0, 100));
+
+  const li = document.querySelector(`[data-news-index="${idx}"]`);
+  const likeBtn = li?.querySelector('.like-btn');
+  if (likeBtn) {
+    likeBtn.textContent = '👍 グッド済み';
+    likeBtn.classList.add('liked');
+    likeBtn.disabled = true;
+  }
+  form.remove();
+  showToast('グッド！好みの分析に反映されます ✓');
+}
+
 // ─── 起動 ─────────────────────────────────────────────────────────────────
 async function init() {
   if ('serviceWorker' in navigator) {
@@ -196,13 +303,23 @@ async function loadToday() {
       }
     }
 
-    // カテゴリ均等配分：各カテゴリから順番に1件ずつ選ぶ
+    // カテゴリ均等配分：各カテゴリから順番に1件ずつ選ぶ（好み順にソート）
     const maxItems = cfg.maxItems || 15;
+    const prefs = getPreferences();
     const byCategory = {};
     for (const item of items) {
       (byCategory[item.category] = byCategory[item.category] || []).push(item);
     }
-    const cats = Object.keys(byCategory);
+    // 好みスコアでカテゴリ内ソート（好みに近い記事を先頭へ）
+    if (prefs) {
+      for (const cat of Object.keys(byCategory)) {
+        byCategory[cat].sort((a, b) => scoreItemByPrefs(b, prefs) - scoreItemByPrefs(a, prefs));
+      }
+    }
+    // 好みカテゴリを先頭にしてラウンドロビン（多めに拾われるよう順序調整）
+    const cats = Object.keys(byCategory).sort((a, b) =>
+      (prefs ? (prefs.catCount[b] || 0) - (prefs.catCount[a] || 0) : 0)
+    );
     const balanced = [];
     let added = true;
     while (balanced.length < maxItems && added) {
@@ -219,7 +336,7 @@ async function loadToday() {
     if (!items.length) items = allItems.slice(0, 5);
 
     $('home-gen-msg').textContent = 'AIが放送原稿を作成中...';
-    const script = await generateScript(items, cfg);
+    const script = await generateScript(items, cfg, prefs);
 
     const broadcast = { date: today, news_items: items, script, generated_at: new Date().toISOString() };
     S.setCachedBroadcast(today, broadcast);
@@ -236,19 +353,22 @@ async function regenerateToday() {
   await loadToday();
 }
 
-async function generateScript(items, cfg) {
+async function generateScript(items, cfg, prefs = null) {
   const lengthMap = { short: '約3分（400字程度）', standard: '約5分（800字程度）', long: '約10分（1600字程度）' };
   const toneMap   = { casual: 'カジュアルで親しみやすい', professional: '落ち着いたプロフェッショナルな', cheerful: '元気で明るい朝らしい' };
 
   const intro      = cfg.customIntro ? `冒頭に必ず次の文を入れてください: 「${cfg.customIntro}」\n\n` : '';
   const customCats = (cfg.customCategories || []).filter(Boolean);
   const customLine = customCats.length ? `- カスタムテーマ（以下のトピックを優先して取り上げてください）: ${customCats.join('、')}\n` : '';
+  const prefLine   = prefs && prefs.total > 0
+    ? `- リスナーの好み（グッドボタン実績より）: 関心カテゴリ「${prefs.topCategories.join('・')}」、関心キーワード「${prefs.topKeywords.slice(0, 5).join('・')}」。これらに関連するニュースはより熱意を持って詳しく紹介してください。\n`
+    : '';
 
   const system = `あなたはプロのラジオパーソナリティです。
 以下のニュース情報をもとに、${lengthMap[cfg.length] || lengthMap.standard}のラジオ放送原稿を作成してください。
 トーンは${toneMap[cfg.tone] || toneMap.casual}口調です。
 ${intro}ルール:
-${customLine}- です・ます調で自然な話し言葉
+${customLine}${prefLine}- です・ます調で自然な話し言葉
 - 難しい用語は噛み砕いて説明
 - 出力は原稿テキストのみ（見出し・箇条書き・記号・マークダウン不要）
 - 数字は日本語の読みに合わせて表記（例: 2025年→二〇二五年、1兆円→一兆円）
@@ -298,7 +418,9 @@ function showPlayer(broadcast, isYesterday = false) {
 
   const list = $('home-news-list');
   list.innerHTML = '';
+  const likedTitles = new Set(getLikedNews().map(l => l.title));
   (broadcast.news_items || []).forEach((item, idx) => {
+    const isLiked = likedTitles.has(item.title);
     const li  = document.createElement('li');
     li.className = 'news-item';
     li.innerHTML = `
@@ -311,6 +433,7 @@ function showPlayer(broadcast, isYesterday = false) {
       <div class="news-item-actions">
         <button class="news-btn" onclick="jumpToNewsAndPlay(${idx})">▶ ここから再生</button>
         <button class="news-btn" onclick="showDeepDiveModal(${idx})">🔍 深掘り</button>
+        <button class="news-btn like-btn${isLiked ? ' liked' : ''}" onclick="likeNews(${idx})"${isLiked ? ' disabled' : ''}>${isLiked ? '👍 グッド済み' : '👍 グッド'}</button>
       </div>
       ${item.url ? `<a class="news-source-link" href="${escHtml(item.url)}" target="_blank" rel="noopener">元記事を読む →</a>` : ''}`;
     li.dataset.newsIndex = idx;
@@ -836,7 +959,7 @@ function renderCustomCategories() {
   custom.forEach(name => {
     const tag = document.createElement('span');
     tag.className = 'cat-tag';
-    tag.innerHTML = `${escHtml(name)}<button class="cat-tag-remove" onclick="removeCustomCategory('${escHtml(name).replace(/'/g, "\\'")}')">✕</button>`;
+    tag.innerHTML = `${escHtml(name)}<button class="cat-tag-remove" onclick="removeCustomCategory('${escHtml(name).replace(/'/g, "\\'")}')">&times;</button>`;
     container.appendChild(tag);
   });
 }
