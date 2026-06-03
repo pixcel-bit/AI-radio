@@ -215,8 +215,8 @@ function scoreItemByPrefs(item, prefs) {
 
 // クロスソースマップ：同じ話題を複数ソースが報じているか検出
 function buildCrossSourceMap(allItems) {
-  const getWords = title => (title.match(/[一-鿿゠-ヿ]{2,}/g) || []);
-  const OVERLAP_THRESHOLD = 2; // 2語以上一致で同トピック判定
+  const getWords = title => (title.match(/[一-鿿゠-ヿ]{3,}/g) || []); // 3文字以上の語のみ（AI・日本など汎用2文字語を除外）
+  const OVERLAP_THRESHOLD = 2; // 3文字以上の語が2語一致で同トピック判定
   const map = {};
   for (const item of allItems) {
     const itemWords = new Set(getWords(item.title));
