@@ -26,6 +26,7 @@ const S = {
       speechRate:       1.0,
       customIntro:      '',
       aiProfile:        null,
+      crossSourceEnabled: true,
     });
   },
   saveSettings(cfg) { LS.setJSON('nr_settings', cfg); },
@@ -264,8 +265,10 @@ function computeScore(item, prefs, crossSourceMap) {
   let score = 0;
   // フィード内順位（上位ほど重要。0位=最重要で最大15点）
   score += Math.max(0, 10 - (item.feedRank || 0)) * 1.5;
-  // クロスソース（複数メディアが同話題を報じると+8点/ソース）
-  score += (crossSourceMap[item.title] || 0) * 8;
+  // クロスソース（上限3ソース×5点=最大+15。OFFにすると無効）
+  if (S.settings.crossSourceEnabled !== false) {
+    score += Math.min(crossSourceMap[item.title] || 0, 3) * 5;
+  }
   // グッド/バッドボタン実績
   score += scoreItemByPrefs(item, prefs);
   // AIプロファイル（+4/-4点/トピック）
@@ -1081,6 +1084,7 @@ function populateSettings() {
   $('setting-intro').value   = cfg.customIntro     || '';
   populateVoiceSelector();
   if (cfg.voiceName) $('setting-voice').value = cfg.voiceName;
+  $('setting-cross-source').checked = cfg.crossSourceEnabled !== false;
   renderCustomCategories();
   renderSourceSettings();
   const profile = S.settings.aiProfile;
@@ -1216,7 +1220,8 @@ function saveSettings() {
     speechRate:       parseFloat($('setting-rate').value),
     customIntro:      $('setting-intro').value.trim(),
     voiceName:        $('setting-voice').value,
-    aiProfile:        S.settings.aiProfile || null,
+    aiProfile:           S.settings.aiProfile || null,
+    crossSourceEnabled:  $('setting-cross-source').checked,
   });
 
   showToast('設定を保存しました ✓');
