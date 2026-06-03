@@ -278,8 +278,8 @@ function computeScore(item, prefs, crossSourceMap) {
   const profile = S.settings.aiProfile;
   if (profile) {
     const text = `${item.title} ${item.summary || ''} ${item.category}`;
-    for (const t of (profile.positiveTopics || [])) { if (text.includes(t)) score += 4; }
-    for (const t of (profile.negativeTopics || [])) { if (text.includes(t)) score -= 4; }
+    for (const t of (profile.positiveTopics || [])) { if (text.includes(t)) score += 6; }
+    for (const t of (profile.negativeTopics || [])) { if (text.includes(t)) score -= 6; }
   }
   return score;
 }
@@ -344,6 +344,7 @@ function submitLike(idx, btn) {
   }
   form.remove();
   showToast('グッド！好みの分析に反映されます ✓');
+  if (reason) updateProfileFromReason(item, reason); // バックグラウンドでプロファイル更新
 }
 
 function dislikeNews(idx) {
@@ -370,6 +371,39 @@ function dislikeNews(idx) {
   const badBtn = li?.querySelector('.bad-btn');
   if (badBtn) { badBtn.textContent = '👎 バッド済み'; badBtn.classList.add('disliked'); badBtn.disabled = true; }
   showToast('バッド！次回から優先度を下げます 👎');
+}
+
+async function updateProfileFromReason(item, reason) {
+  if (!S.apiKey) return;
+  const cfg      = S.settings;
+  const existing = (cfg.aiProfile?.positiveTopics || []);
+
+  const system = `ニュース記事とユーザーのコメントから、興味・関心を表す具体的なトピックを3〜5語抽出してください。
+JSONのみ返してください: {"newTopics": ["トピック1", "トピック2"]}
+ルール:
+- 既存トピック（${existing.join('、') || 'なし'}）と重複しない新しい視点を抽出
+- 「テクノロジー」より「SaaS導入事例」「エンタープライズAI活用」のように具体的に
+- 日本語で返す`;
+
+  try {
+    const raw    = await callClaude(system, `記事: 【${item.category}】${item.title}\nコメント: ${reason}`);
+    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)[0]);
+    const newTopics = (parsed.newTopics || []).filter(t => t.length > 0);
+    if (!newTopics.length) return;
+
+    const latest  = S.settings; // 再取得（並列変更考慮）
+    const profile = latest.aiProfile || { profileText: '', positiveTopics: [], positiveAngles: [], negativeTopics: [], analyzedAt: null };
+    const existingSet = new Set(profile.positiveTopics);
+    const added = newTopics.filter(t => !existingSet.has(t));
+    if (!added.length) return;
+
+    profile.positiveTopics = [...profile.positiveTopics, ...added];
+    profile.analyzedAt     = new Date().toISOString();
+    latest.aiProfile       = profile;
+    S.saveSettings(latest);
+    showToast(`プロファイルを更新しました（+${added.length}語）✓`);
+    renderProfileResult(profile);
+  } catch { /* サイレント失敗 */ }
 }
 
 // ─── 起動 ─────────────────────────────────────────────────────────────────
