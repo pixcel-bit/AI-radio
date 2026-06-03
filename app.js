@@ -620,22 +620,27 @@ function setMainSpeed(rate, btn) {
 }
 
 // ─── ニュース位置マッピング & ジャンプ再生 ────────────────────────────────────
-function buildNewsIndexMap(numNews, numChunks) {
-  const map = {};
-  const chunksPerNews = numNews > 0 ? Math.floor(numChunks / numNews) : 0;
-  for (let i = 0; i < numNews; i++) {
-    map[i] = Math.max(0, i * chunksPerNews);
-  }
-  return map;
-}
-
 function jumpToNewsAndPlay(newsIdx) {
   const broadcast = LS.getJSON(`nr_broadcast_${todayStr()}`);
   if (!broadcast || !broadcast.news_items) return;
-
   if (!mainChunks || mainChunks.length === 0) return;
-  const map = buildNewsIndexMap(broadcast.news_items.length, mainChunks.length);
-  const startChunk = map[newsIdx];
+
+  const items    = broadcast.news_items;
+  const item     = items[newsIdx];
+  const perChunk = mainChunks.length / items.length;
+
+  // タイトルから3文字以上の語を抽出してチャンク内を検索
+  const keywords = (item.title.match(/[一-鿿゠-ヿ]{3,}|[A-Za-z]{4,}/g) || []).slice(0, 4);
+  // 前アイテムの推定終端以降から検索（オープニングや前アイテムへの誤マッチを防ぐ）
+  const searchFrom = Math.max(0, Math.floor((newsIdx - 0.5) * perChunk));
+
+  let startChunk = Math.floor(newsIdx * perChunk); // フォールバック
+  for (let i = searchFrom; i < mainChunks.length; i++) {
+    if (keywords.some(kw => mainChunks[i].includes(kw))) {
+      startChunk = i;
+      break;
+    }
+  }
 
   stopMainSpeak();
   mainChunkIdx = startChunk;
