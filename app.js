@@ -65,6 +65,16 @@ const RSS_SOURCES = [
   { url: 'https://toyokeizai.net/list/feed/rss', source: '東洋経済', category: 'ビジネス' },
   { url: 'https://gendai.media/rss', source: '現代ビジネス', category: 'ビジネス' },
   { url: 'https://president.jp/list/rss/top', source: 'プレジデントオンライン', category: 'ビジネス' },
+  { url: 'https://forbesjapan.com/feed', source: 'Forbes Japan', category: 'ビジネス' },
+  { url: 'https://www.bengo4.com/rss/', source: '弁護士ドットコム', category: '社会' },
+  { url: 'https://www.asahi.com/rss/asahi/newsheadlines.rdf', source: '朝日新聞', category: '主要' },
+  { url: 'https://feeds.reuters.com/reuters/JPTopNews', source: 'Reuters Japan', category: '国際' },
+  { url: 'https://feeds.bbci.co.uk/japanese/rss.xml', source: 'BBC Japan', category: '国際' },
+  { url: 'https://wired.jp/rss/', source: 'Wired Japan', category: 'テクノロジー' },
+  { url: 'https://japan.cnet.com/rss/index.rdf', source: 'CNET Japan', category: 'テクノロジー' },
+  { url: 'https://pc.watch.impress.co.jp/rss/pc/news.rdf', source: 'PC Watch', category: 'テクノロジー' },
+  { url: 'https://news.mynavi.jp/rss/it', source: 'マイナビニュース', category: 'テクノロジー' },
+  { url: 'https://www.gizmodo.jp/feed/', source: 'Gizmodo Japan', category: 'テクノロジー' },
 ];
 
 async function fetchViaProxy(url) {
