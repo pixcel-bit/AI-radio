@@ -15,7 +15,7 @@ const S = {
 
   get settings() {
     return LS.getJSON('nr_settings', {
-      categories:       ['主要', '社会', '政治', '経済', '国際', 'スポーツ', '科学・文化', 'テクノロジー'],
+      categories:       ['主要', '社会', '政治', '経済', '国際', 'スポーツ', '科学・文化', 'テクノロジー', 'AI', 'ビジネス'],
       customCategories: [],
       maxItems:         15,
       focusKeywords:    '',
@@ -59,6 +59,12 @@ const RSS_SOURCES = [
   { url: 'https://www3.nhk.or.jp/rss/news/cat6.xml', source: 'NHK', category: '科学・文化' },
   { url: 'https://gigazine.net/news/rss_2.0/', source: 'Gigazine', category: 'テクノロジー' },
   { url: 'https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml', source: 'ITmedia', category: 'テクノロジー' },
+  { url: 'https://www.publickey1.jp/atom.xml', source: 'Publickey', category: 'テクノロジー' },
+  { url: 'https://japan.zdnet.com/rss/all/', source: 'ZDNet Japan', category: 'テクノロジー' },
+  { url: 'https://rss.itmedia.co.jp/rss/2.0/aiplus.xml', source: 'ITmedia AI+', category: 'AI' },
+  { url: 'https://toyokeizai.net/list/feed/rss', source: '東洋経済', category: 'ビジネス' },
+  { url: 'https://gendai.media/rss', source: '現代ビジネス', category: 'ビジネス' },
+  { url: 'https://president.jp/list/rss/top', source: 'プレジデントオンライン', category: 'ビジネス' },
 ];
 
 async function fetchViaProxy(url) {
@@ -204,6 +210,12 @@ function hasTopicOverlap(title, covered) {
 
 function markTopicCovered(title, covered) {
   for (const w of getTopicWords(title)) covered.add(w);
+}
+
+const AI_KEYWORDS = ['AI', '人工知能', '生成AI', 'LLM', 'ChatGPT', 'Claude', '機械学習', 'GPT', 'Gemini', 'Copilot'];
+function isAIRelated(item) {
+  const text = item.title + ' ' + (item.category || '');
+  return item.category === 'AI' || AI_KEYWORDS.some(kw => text.includes(kw));
 }
 
 // 記事の総合重要度スコア
@@ -381,7 +393,7 @@ async function loadToday() {
     // 第1パス：各カテゴリから、トピック重複のない最高スコア記事を1件確保
     for (const item of scored) {
       if (selected.length >= maxItems) break;
-      if (!usedCats.has(item.category) && !hasTopicOverlap(item.title, coveredTopics)) {
+      if (!usedCats.has(item.category) && (!hasTopicOverlap(item.title, coveredTopics) || isAIRelated(item))) {
         selected.push(item);
         usedCats.add(item.category);
         markTopicCovered(item.title, coveredTopics);
@@ -390,7 +402,7 @@ async function loadToday() {
     // 第2パス：残枠をスコア順で埋める（トピック重複は除外）
     for (const item of scored) {
       if (selected.length >= maxItems) break;
-      if (!selected.some(s => s.title === item.title) && !hasTopicOverlap(item.title, coveredTopics)) {
+      if (!selected.some(s => s.title === item.title) && (!hasTopicOverlap(item.title, coveredTopics) || isAIRelated(item))) {
         selected.push(item);
         markTopicCovered(item.title, coveredTopics);
       }
