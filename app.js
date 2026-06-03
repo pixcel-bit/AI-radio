@@ -271,19 +271,22 @@ function migrateProfile(profile) {
   return profile;
 }
 
-// トピック配列に newTopics を追記（既存なら weight++、上限100語）
+// トピック配列に newTopics を追記（既存なら weight++）
+// 上限100語に達したとき: weight=1の仮登録語を削除してから追加
+const TOPIC_LIMIT = 100;
 function mergeTopics(existing, newTopics) {
-  const arr = existing ? [...existing] : [];
+  let arr = existing ? [...existing] : [];
   for (const topicStr of newTopics) {
     if (!topicStr) continue;
     const idx = arr.findIndex(t => t.topic === topicStr);
     if (idx >= 0) {
       arr[idx] = { ...arr[idx], weight: Math.min(arr[idx].weight + 1, 10) };
     } else {
-      arr.push({ topic: topicStr, weight: 1 });
+      if (arr.length >= TOPIC_LIMIT) arr = arr.filter(t => t.weight > 1); // 仮登録を掃除
+      if (arr.length < TOPIC_LIMIT) arr.push({ topic: topicStr, weight: 1 });
     }
   }
-  return arr.sort((a, b) => b.weight - a.weight).slice(0, 100);
+  return arr.sort((a, b) => b.weight - a.weight);
 }
 
 // 記事の総合重要度スコア
@@ -303,10 +306,10 @@ function computeScore(item, prefs, crossSourceMap) {
     const text = `${item.title} ${item.summary || ''} ${item.category}`;
     let posScore = 0, negScore = 0;
     for (const t of (profile.positiveTopics || [])) {
-      if (text.includes(t.topic)) posScore += Math.min(t.weight * 2, 8);
+      if (t.weight >= 2 && text.includes(t.topic)) posScore += Math.min(t.weight * 2, 8);
     }
     for (const t of (profile.negativeTopics || [])) {
-      if (text.includes(t.topic)) negScore += Math.min(t.weight * 2, 8);
+      if (t.weight >= 2 && text.includes(t.topic)) negScore += Math.min(t.weight * 2, 8);
     }
     score += Math.min(posScore, 15) - Math.min(negScore, 15);
   }
