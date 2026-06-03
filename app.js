@@ -216,21 +216,15 @@ function scoreItemByPrefs(item, prefs) {
 // クロスソースマップ：同じ話題を複数ソースが報じているか検出
 function buildCrossSourceMap(allItems) {
   const getWords = title => (title.match(/[一-鿿゠-ヿ]{2,}/g) || []);
-  const wordIndex = {};
-  for (const item of allItems) {
-    for (const w of getWords(item.title)) {
-      (wordIndex[w] = wordIndex[w] || []).push(item);
-    }
-  }
+  const OVERLAP_THRESHOLD = 2; // 2語以上一致で同トピック判定
   const map = {};
   for (const item of allItems) {
+    const itemWords = new Set(getWords(item.title));
     const otherSources = new Set();
-    for (const w of getWords(item.title)) {
-      for (const related of (wordIndex[w] || [])) {
-        if (related.title !== item.title && related.source !== item.source) {
-          otherSources.add(related.source);
-        }
-      }
+    for (const other of allItems) {
+      if (other.title === item.title || other.source === item.source) continue;
+      const overlap = getWords(other.title).filter(w => itemWords.has(w)).length;
+      if (overlap >= OVERLAP_THRESHOLD) otherSources.add(other.source);
     }
     map[item.title] = otherSources.size;
   }
