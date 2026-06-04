@@ -923,7 +923,7 @@ function showPlayer(broadcast, isYesterday = false) {
   if (getPlayMode() === 'voice') {
     setTimeout(() => startMainSpeak(), 400);
   } else {
-    showToast('O-Renモード: ▶ボタンを押して2本指スワイプで読み上げ開始');
+    showToast('読み上げモード: ▶ボタンを押して2本指スワイプで読み上げ開始');
   }
 }
 
@@ -939,7 +939,7 @@ function setPlayMode(mode) {
   _applyPlayModeUI(mode);
   if (mode === 'speakscreen') {
     stopMainSpeak();
-    showToast('O-Renモード: 再生ボタンまたは「ここから再生」後、2本指で上からスワイプ');
+    showToast('読み上げモード: 再生ボタンまたは「ここから再生」後、2本指で上からスワイプ');
   } else {
     closeReadingMode();
     showToast('音声モード: 再生ボタンで Kyoko が読み上げます');
