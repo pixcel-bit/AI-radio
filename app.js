@@ -1552,7 +1552,6 @@ async function callClaude(system, userMsg) {
 
 // ─── 原稿読み上げモード（iOS Speak Screen 用） ────────────────────────────
 function openReadingMode() {
-  // home-script が空の場合は mainChunks からフォールバック
   const scriptEl = $('home-script');
   let text = scriptEl ? scriptEl.textContent.trim() : '';
   if (!text && typeof mainChunks !== 'undefined' && mainChunks.length) {
@@ -1571,14 +1570,21 @@ function openReadingMode() {
     content.appendChild(p);
   });
 
-  rmEl.style.display = 'flex';
-  content.scrollTop = 0;
+  // 背後のコンテンツをアクセシビリティツリーから隠す
+  // → iOS Speak Screen が reading-mode の内容だけを読む
+  $('screen-main')?.setAttribute('aria-hidden', 'true');
+  $('screen-onboarding')?.setAttribute('aria-hidden', 'true');
+
+  rmEl.style.display = 'block';
+  rmEl.scrollTop = 0;
   if (typeof mainSpeaking !== 'undefined' && mainSpeaking) toggleMainSpeak();
 }
 
 function closeReadingMode() {
   const rmEl = $('reading-mode');
   if (rmEl) rmEl.style.display = 'none';
+  $('screen-main')?.removeAttribute('aria-hidden');
+  $('screen-onboarding')?.removeAttribute('aria-hidden');
 }
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────
