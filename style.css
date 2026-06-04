@@ -1248,9 +1248,14 @@ details[open] .news-detail summary::before,
 /* アイコンのみの正方形ボタン */
 .icon-btn-sq {
   flex: 0 0 auto;
-  padding: 6px 10px;
-  font-size: 15px;
+  padding: 10px 14px;
+  font-size: 16px;
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* モーダルオーバーレイ */
