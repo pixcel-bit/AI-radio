@@ -1670,18 +1670,34 @@ function populateVoiceSelector() {
   const sel = $('setting-voice');
   if (!sel) return;
 
-  // lang が ja-JP 以外でも既知の日本語声名でマッチ（Safari iOS 対応）
-  const jaVoices = _cachedVoices.filter(_isJaVoice);
+  const jaVoices  = _cachedVoices.filter(_isJaVoice);
+  const otherVoices = _cachedVoices.filter(v => !_isJaVoice(v));
 
   sel.innerHTML = '<option value="">システムデフォルト</option>';
-  if (!jaVoices.length) return; // 見つからなければシステムデフォルトのみ
 
-  jaVoices.forEach(v => {
-    const opt = document.createElement('option');
-    opt.value       = v.name;
-    opt.textContent = v.name;
-    sel.appendChild(opt);
-  });
+  if (jaVoices.length) {
+    const grp = document.createElement('optgroup');
+    grp.label = '🇯🇵 日本語';
+    jaVoices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = v.name;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  }
+
+  if (otherVoices.length) {
+    const grp = document.createElement('optgroup');
+    grp.label = 'その他（Siri声など日本語の可能性あり）';
+    otherVoices.sort((a, b) => a.name.localeCompare(b.name)).forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = v.lang ? `${v.name} (${v.lang})` : v.name;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  }
 
   const saved = S.settings.voiceName || '';
   if (saved) sel.value = saved;
