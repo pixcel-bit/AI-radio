@@ -923,7 +923,7 @@ function showPlayer(broadcast, isYesterday = false) {
   if (getPlayMode() === 'voice') {
     setTimeout(() => startMainSpeak(), 400);
   } else {
-    showToast('読み上げモード: ▶ボタンを押して2本指スワイプで読み上げ開始');
+    setTimeout(() => openReadingMode(), 400);
   }
 }
 
