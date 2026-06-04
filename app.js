@@ -1564,7 +1564,6 @@ function testVoice() {
   const sel = $('setting-voice');
   const name = sel ? sel.value : '';
   const voice = resolveVoice(name);
-  speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance('こんにちは。これはテスト再生です。');
   utt.lang = 'ja-JP';
   utt.rate = parseFloat($('setting-rate')?.value || '1.0');
@@ -1572,9 +1571,14 @@ function testVoice() {
     utt.voice = voice;
     showToast(`テスト再生: ${voice.name}`);
   } else {
-    showToast(name ? `⚠️ 声が見つかりません: ${name}（デフォルト使用）` : 'テスト再生: デフォルト');
+    showToast(name ? `⚠️ 声が見つかりません: ${name}` : 'テスト再生: デフォルト');
   }
-  speechSynthesis.speak(utt);
+  // iOS: cancel() 直後に speak() すると無視されるため少し待つ
+  speechSynthesis.cancel();
+  setTimeout(() => {
+    speechSynthesis.resume();
+    speechSynthesis.speak(utt);
+  }, 150);
 }
 
 function toggleVis(id) {
