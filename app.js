@@ -1550,6 +1550,30 @@ async function callClaude(system, userMsg) {
   return data.content[0].text;
 }
 
+// ─── 原稿読み上げモード（iOS Speak Screen 用） ────────────────────────────
+function openReadingMode() {
+  const scriptEl = $('home-script');
+  const text = scriptEl ? scriptEl.textContent.trim() : '';
+  if (!text) { showToast('原稿がありません'); return; }
+
+  const content = $('rm-content');
+  content.innerHTML = '';
+  text.split(/\n+/).filter(l => l.trim()).forEach(line => {
+    const p = document.createElement('p');
+    p.textContent = line;
+    content.appendChild(p);
+  });
+
+  $('reading-mode').style.display = 'flex';
+  content.scrollTop = 0;
+  // 再生中は一時停止（読み上げモードに集中）
+  if (mainSpeaking) toggleMainSpeak();
+}
+
+function closeReadingMode() {
+  $('reading-mode').style.display = 'none';
+}
+
 // ─── ユーティリティ ───────────────────────────────────────────────────────
 let _cachedVoices = [];
 const _JA_VOICE_NAMES = ['Kyoko', 'O-Ren', 'O-ren', 'Otoya'];

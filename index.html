@@ -82,6 +82,7 @@
             <button class="speed-btn" onclick="setMainSpeed(1.5,this)">1.5x</button>
           </div>
           <button class="duo-preview-btn" id="duo-preview-btn" onclick="startDuoPreview()">🎙 2人で聴く（β）</button>
+          <button class="osren-btn" id="osren-btn" onclick="openReadingMode()">📖 O-Ren で聴く</button>
         </div>
 
         <!-- 2人版プレイヤー -->
@@ -288,6 +289,22 @@
       <button class="tab-btn"        data-tab="archive"  onclick="switchTab('archive')"><span class="tab-icon">📋</span><span>履歴</span></button>
       <button class="tab-btn"        data-tab="settings" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span><span>設定</span></button>
     </nav>
+  </div>
+
+  <!-- ========== 原稿読み上げモード（iOS Speak Screen 用） ========== -->
+  <div id="reading-mode" style="display:none" aria-live="polite">
+    <div class="rm-header">
+      <div class="rm-instruction">
+        <div class="rm-gesture">☝️☝️</div>
+        <div class="rm-guide">
+          <strong>2本指で上からスワイプ</strong>
+          <span>→ iOSがO-Renで読み上げ開始</span>
+          <span class="rm-guide-sub">画面の読み上げ機能を使用</span>
+        </div>
+      </div>
+      <button class="rm-close-btn" onclick="closeReadingMode()">✕ 閉じる</button>
+    </div>
+    <div id="rm-content" class="rm-content"></div>
   </div>
 
 </div>
