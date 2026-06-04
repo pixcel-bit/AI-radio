@@ -158,6 +158,90 @@ html, body {
   padding: 20px;
 }
 
+/* ─── 2人版プレビュー ── */
+.duo-preview-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 9px;
+  background: transparent;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.duo-preview-btn:active,
+.duo-preview-btn:disabled {
+  background: var(--accent);
+  color: white;
+  opacity: 0.7;
+}
+
+.duo-card {
+  margin-top: 10px;
+  border-color: var(--accent);
+}
+
+.duo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.duo-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.duo-close-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.duo-speaker-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.duo-speaker {
+  flex: 1;
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.25s;
+}
+
+.duo-speaker.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.duo-current-text {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  min-height: 44px;
+}
+
 .player-date {
   font-size: 17px;
   font-weight: 700;

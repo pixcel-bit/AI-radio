@@ -81,6 +81,29 @@
             <button class="speed-btn" onclick="setMainSpeed(1.2,this)">1.2x</button>
             <button class="speed-btn" onclick="setMainSpeed(1.5,this)">1.5x</button>
           </div>
+          <button class="duo-preview-btn" id="duo-preview-btn" onclick="startDuoPreview()">🎙 2人で聴く（β）</button>
+        </div>
+
+        <!-- 2人版プレイヤー -->
+        <div id="duo-player-card" class="player-card duo-card" style="display:none">
+          <div class="duo-header">
+            <span class="duo-badge">🎙 2人版プレビュー</span>
+            <button onclick="stopDuo()" class="duo-close-btn">✕ 終了</button>
+          </div>
+          <div class="duo-speaker-row">
+            <span id="duo-speaker-a" class="duo-speaker">MC-A</span>
+            <span id="duo-speaker-b" class="duo-speaker">MC-B</span>
+          </div>
+          <div class="player-controls">
+            <button class="play-btn" id="duo-play-btn" onclick="toggleDuoSpeak()">▶</button>
+            <div class="progress-wrap">
+              <div class="tts-progress-bar"><div id="duo-progress-fill" class="tts-progress-fill"></div></div>
+              <div class="time-row">
+                <span id="duo-chunk-info">タップして再生</span>
+              </div>
+            </div>
+          </div>
+          <div id="duo-current-text" class="duo-current-text"></div>
         </div>
         <details class="news-detail" open>
           <summary>今日のニュース一覧</summary>
