@@ -775,10 +775,10 @@ function showPlayer(broadcast, isYesterday = false) {
       <div class="news-title">${escHtml(item.title || '')}</div>
       <div class="news-summary">${escHtml(item.summary || '')}</div>
       <div class="news-item-actions">
-        <button class="news-btn" onclick="jumpToNewsAndPlay(${idx})">▶ ここから再生</button>
-        <button class="news-btn" onclick="showDeepDiveModal(${idx})">🔍 深掘り</button>
-        <button class="news-btn like-btn${isLiked ? ' liked' : ''}" onclick="likeNews(${idx})"${isLiked ? ' disabled' : ''}>${isLiked ? '👍 グッド済み' : '👍 グッド'}</button>
-        <button class="news-btn bad-btn${isDisliked ? ' disliked' : ''}" onclick="dislikeNews(${idx})"${isDisliked ? ' disabled' : ''}>${isDisliked ? '👎 バッド済み' : '👎 バッド'}</button>
+        <button class="news-btn play-news-btn" onclick="jumpToNewsAndPlay(${idx})">▶ 再生</button>
+        <button class="news-btn deep-btn" onclick="showDeepDiveModal(${idx})">🔍 深掘り</button>
+        <button class="news-btn icon-btn-sq like-btn${isLiked ? ' liked' : ''}" onclick="likeNews(${idx})"${isLiked ? ' disabled' : ''}>👍</button>
+        <button class="news-btn icon-btn-sq bad-btn${isDisliked ? ' disliked' : ''}" onclick="dislikeNews(${idx})"${isDisliked ? ' disabled' : ''}>👎</button>
       </div>
       ${item.url ? `<a class="news-source-link" href="${escHtml(item.url)}" target="_blank" rel="noopener">元記事を読む →</a>` : ''}`;
     li.dataset.newsIndex = idx;

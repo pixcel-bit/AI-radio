@@ -1037,27 +1037,44 @@ details[open] .news-detail summary::before,
 
 /* ニュース一覧のアクション */
 .news-item-actions {
-  margin-top: 12px;
+  margin-top: 10px;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .news-btn {
-  flex: 0 1 auto;
-  padding: 8px 12px;
-  font-size: 13px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 12px;
   border: 1px solid var(--accent);
   background: transparent;
   color: var(--accent);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .news-btn:active {
   background: var(--accent);
   color: var(--surface);
+}
+
+/* テキスト付きボタンは均等に伸ばす */
+.play-news-btn,
+.deep-btn {
+  flex: 1 1 0;
+  text-align: center;
+}
+
+/* アイコンのみの正方形ボタン */
+.icon-btn-sq {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 15px;
+  line-height: 1;
 }
 
 /* モーダルオーバーレイ */
