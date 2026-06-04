@@ -158,6 +158,170 @@ html, body {
   padding: 20px;
 }
 
+/* ─── 2人版プレビュー ── */
+.duo-preview-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 9px;
+  background: transparent;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.duo-preview-btn:active,
+.duo-preview-btn:disabled {
+  background: var(--accent);
+  color: white;
+  opacity: 0.7;
+}
+
+.duo-card {
+  margin-top: 10px;
+  border-color: var(--accent);
+}
+
+.duo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.duo-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.duo-close-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.duo-speaker-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.duo-speaker {
+  flex: 1;
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.25s;
+}
+
+.duo-speaker.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.duo-current-text {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.7;
+  min-height: 44px;
+}
+
+/* ─── 再生モード切り替え ── */
+.mode-toggle {
+  display: flex;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mode-toggle-btn {
+  flex: 1;
+  padding: 9px 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.mode-toggle-btn:first-child {
+  border-right: 1px solid var(--border);
+}
+
+.mode-toggle-btn.active {
+  background: #0f2540;
+  color: #4a9eff;
+  font-weight: 600;
+}
+
+.mode-toggle-btn:active {
+  background: var(--surface2);
+}
+
+/* 背後テキスト：視覚的に不可視、アクセシビリティツリーには存在 */
+#rm-bg-text {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  color: transparent;
+  pointer-events: none;
+  overflow: hidden;
+  padding: 60px 20px 100px;
+  font-size: 17px;
+  line-height: 2;
+}
+
+/* 読み上げモード中の小バッジ */
+#rm-badge {
+  position: fixed;
+  bottom: calc(var(--tab-h) + var(--safe-bottom) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  background: #1a3a5c;
+  border: 1px solid #4a9eff;
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  font-size: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+#rm-badge span { color: #88bbff; }
+#rm-badge button {
+  background: #4a9eff;
+  border: none;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
 .player-date {
   font-size: 17px;
   font-weight: 700;
@@ -299,6 +463,17 @@ details[open] .news-detail summary::before,
 .news-title a:active { color: var(--accent2); }
 
 .news-summary { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+.news-source-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--accent2);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.news-source-link:active { border-color: var(--accent2); }
 
 .script-text {
   padding: 0 16px 16px;
@@ -600,6 +775,18 @@ details[open] .news-detail summary::before,
   flex-shrink: 0;
 }
 
+.btn-test-voice {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+  height: 40px;
+}
+
 .settings-section small {
   font-size: 11px;
   color: var(--text-muted);
@@ -893,6 +1080,73 @@ details[open] .news-detail summary::before,
   color: white;
 }
 
+/* カスタムカテゴリタグ */
+.cat-custom-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  display: block;
+  margin-top: 14px;
+}
+.cat-custom-label small { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+
+.cat-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent);
+  color: white;
+  border-radius: 20px;
+  padding: 4px 8px 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cat-tag-remove {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+.cat-tag-remove:active { color: white; }
+
+.custom-cat-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.custom-cat-add input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+.custom-cat-add input:focus { border-color: var(--accent); }
+
+.btn-add-cat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.btn-add-cat:active { border-color: var(--accent); color: var(--accent); }
+
 /* ── レンジスライダー ── */
 .range-row {
   display: flex;
@@ -959,27 +1213,44 @@ details[open] .news-detail summary::before,
 
 /* ニュース一覧のアクション */
 .news-item-actions {
-  margin-top: 12px;
+  margin-top: 10px;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .news-btn {
-  flex: 0 1 auto;
-  padding: 8px 12px;
-  font-size: 13px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 12px;
   border: 1px solid var(--accent);
   background: transparent;
   color: var(--accent);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .news-btn:active {
   background: var(--accent);
   color: var(--surface);
+}
+
+/* テキスト付きボタンは均等に伸ばす */
+.play-news-btn,
+.deep-btn {
+  flex: 1 1 0;
+  text-align: center;
+}
+
+/* アイコンのみの正方形ボタン */
+.icon-btn-sq {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 15px;
+  line-height: 1;
 }
 
 /* モーダルオーバーレイ */
@@ -1109,4 +1380,237 @@ details[open] .news-detail summary::before,
   color: var(--text);
   line-height: 1.6;
   padding: 8px 0;
+}
+
+/* グッドボタン */
+.like-btn {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.like-btn.liked {
+  background: #4caf5022;
+  color: #4caf50;
+  opacity: 0.7;
+  cursor: default;
+}
+
+.bad-btn {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.bad-btn.disliked {
+  background: #f4433622;
+  color: #f44336;
+  opacity: 0.7;
+  cursor: default;
+}
+
+.like-form {
+  margin-top: 10px;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #4caf50;
+}
+
+.like-reason {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  resize: none;
+  font-family: inherit;
+  outline: none;
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+.like-reason::placeholder {
+  color: var(--text-muted);
+}
+
+.like-submit-btn {
+  margin-top: 8px;
+  padding: 6px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.like-submit-btn:active {
+  opacity: 0.8;
+}
+
+.dislike-form {
+  margin-top: 10px;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #f44336;
+}
+
+.dislike-submit-btn {
+  margin-top: 8px;
+  padding: 6px 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dislike-submit-btn:active { opacity: 0.8; }
+
+.reason-form-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.reason-skip-btn {
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.reason-skip-btn:active { opacity: 0.7; }
+
+/* ─── ソース設定 ────────────────────────────────────────────────────────── */
+.source-group {
+  margin-bottom: 14px;
+}
+
+.source-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.source-cat-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  letter-spacing: 0.03em;
+}
+
+.btn-src-all {
+  font-size: 11px;
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-src-all:hover { border-color: var(--accent); color: var(--accent); }
+
+.source-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.source-check {
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+  user-select: none;
+}
+.source-check input { display: none; }
+.source-check:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.source-check:has(input:not(:checked)) {
+  opacity: 0.4;
+}
+
+/* ─── AIプロファイル ────────────────────────────────────────────────────── */
+.profile-result-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.profile-result-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  min-width: 56px;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.profile-tag {
+  background: var(--accent);
+  color: white;
+  border-radius: 12px;
+  padding: 3px 9px;
+  font-size: 11px;
+}
+
+.profile-tag.negative {
+  background: #f44336;
+}
+
+.profile-tag.strong {
+  font-weight: 700;
+  opacity: 1;
+}
+
+.weight-badge {
+  opacity: 0.75;
+  font-size: 9px;
+  margin-left: 2px;
+}
+
+.btn-reset-profile {
+  margin-top: 10px;
+  padding: 5px 12px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-reset-profile:active { opacity: 0.7; }
+
+.profile-analyzed-at {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
 }

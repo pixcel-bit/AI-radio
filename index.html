@@ -81,8 +81,35 @@
             <button class="speed-btn" onclick="setMainSpeed(1.2,this)">1.2x</button>
             <button class="speed-btn" onclick="setMainSpeed(1.5,this)">1.5x</button>
           </div>
+          <button class="duo-preview-btn" id="duo-preview-btn" onclick="startDuoPreview()">🎙 2人で聴く（β）</button>
+          <div class="mode-toggle">
+            <button class="mode-toggle-btn" id="mode-btn-voice" onclick="setPlayMode('voice')">🔊 音声モード</button>
+            <button class="mode-toggle-btn" id="mode-btn-speak" onclick="setPlayMode('speakscreen')">📖 O-Renモード</button>
+          </div>
         </div>
-        <details class="news-detail">
+
+        <!-- 2人版プレイヤー -->
+        <div id="duo-player-card" class="player-card duo-card" style="display:none">
+          <div class="duo-header">
+            <span class="duo-badge">🎙 2人版プレビュー</span>
+            <button onclick="stopDuo()" class="duo-close-btn">✕ 終了</button>
+          </div>
+          <div class="duo-speaker-row">
+            <span id="duo-speaker-a" class="duo-speaker">MC-A</span>
+            <span id="duo-speaker-b" class="duo-speaker">MC-B</span>
+          </div>
+          <div class="player-controls">
+            <button class="play-btn" id="duo-play-btn" onclick="toggleDuoSpeak()">▶</button>
+            <div class="progress-wrap">
+              <div class="tts-progress-bar"><div id="duo-progress-fill" class="tts-progress-fill"></div></div>
+              <div class="time-row">
+                <span id="duo-chunk-info">タップして再生</span>
+              </div>
+            </div>
+          </div>
+          <div id="duo-current-text" class="duo-current-text"></div>
+        </div>
+        <details class="news-detail" open>
           <summary>今日のニュース一覧</summary>
           <ul class="news-list" id="home-news-list"></ul>
         </details>
@@ -145,12 +172,26 @@
         <section class="settings-section">
           <h3>取り上げるカテゴリ</h3>
           <div class="cat-checks">
-            <label class="cat-check"><input type="checkbox" value="総合"       >総合</label>
-            <label class="cat-check"><input type="checkbox" value="政治"       >政治</label>
-            <label class="cat-check"><input type="checkbox" value="経済"       >経済</label>
-            <label class="cat-check"><input type="checkbox" value="国際"       >国際</label>
-            <label class="cat-check"><input type="checkbox" value="科学・文化" >科学</label>
+            <label class="cat-check"><input type="checkbox" value="主要"        >主要</label>
+            <label class="cat-check"><input type="checkbox" value="社会"        >社会</label>
+            <label class="cat-check"><input type="checkbox" value="政治"        >政治</label>
+            <label class="cat-check"><input type="checkbox" value="経済"        >経済</label>
+            <label class="cat-check"><input type="checkbox" value="国際"        >国際</label>
+            <label class="cat-check"><input type="checkbox" value="スポーツ"    >スポーツ</label>
+            <label class="cat-check"><input type="checkbox" value="科学・文化"  >科学・文化</label>
             <label class="cat-check"><input type="checkbox" value="テクノロジー">テクノロジー</label>
+            <label class="cat-check"><input type="checkbox" value="AI"          >AI</label>
+            <label class="cat-check"><input type="checkbox" value="SaaS"        >SaaS</label>
+            <label class="cat-check"><input type="checkbox" value="ビジネス"    >ビジネス</label>
+          </div>
+          <div>
+            <span class="cat-custom-label">カスタムカテゴリ <small>（Claude への追加テーマ指示）</small></span>
+            <div id="custom-cat-list" class="cat-checks" style="margin-top:6px;min-height:28px"></div>
+            <div class="custom-cat-add">
+              <input type="text" id="new-cat-input" placeholder="例: スポーツ、エンタメ、育児" maxlength="20"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomCategory()}">
+              <button type="button" class="btn-add-cat" onclick="addCustomCategory()">＋追加</button>
+            </div>
           </div>
         </section>
 
@@ -163,10 +204,6 @@
                      oninput="$('setting-max-val').textContent=this.value+'件'">
               <span id="setting-max-val">15件</span>
             </div>
-          </label>
-          <label>
-            <span>重視するキーワード <small>（カンマ区切り）</small></span>
-            <input type="text" id="setting-focus" placeholder="例: AI, 日本株, 半導体">
           </label>
           <label>
             <span>除外するキーワード <small>（カンマ区切り）</small></span>
@@ -203,15 +240,44 @@
           </label>
           <label>
             <span>読み上げの声 <small>（端末依存）</small></span>
-            <select id="setting-voice">
-              <option value="">システムデフォルト</option>
-            </select>
-            <small>iOSは「O-Ren」が最も自然です</small>
+            <div class="input-row">
+              <select id="setting-voice" style="flex:1">
+                <option value="">システムデフォルト</option>
+              </select>
+              <button type="button" class="btn-test-voice" onclick="reloadVoices()">↺</button>
+              <button type="button" class="btn-test-voice" onclick="testVoice()">テスト</button>
+            </div>
+            <small>声が少ない場合は ↺ で再読み込み。ChromeよりSafariで開くと多くの声が使えることがあります</small>
           </label>
           <label>
             <span>オープニング定型文 <small>（任意）</small></span>
             <textarea id="setting-intro" rows="2" placeholder="例: おはようございます！今日も一日頑張りましょう。"></textarea>
           </label>
+          <label class="toggle-label">
+            <span>
+              クロスソーススコアリング
+              <small>（複数メディアが同話題を報じると加点。OFFで自分好みのニュースだけに集中）</small>
+            </span>
+            <span class="toggle-switch">
+              <input type="checkbox" id="setting-cross-source">
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+        </section>
+
+        <div class="settings-group-label" style="margin-top:20px">🧠 好みのプロファイル</div>
+        <section class="settings-section">
+          <h3>AIによるアルゴリズムカスタマイズ</h3>
+          <small>好みや関心を自由に入力してください。AIが分析し、ニュース選定スコアと原稿生成の両方に反映します。</small>
+          <textarea id="profile-input" rows="4" style="margin-top:8px" placeholder="例: テックタッチのCS担当として、B2B SaaSの動向とAI活用に強い関心があります。エンタープライズ向けのAI導入事例、カスタマーサクセスに関する情報を優先してほしいです。スポーツや芸能ニュースは不要です。"></textarea>
+          <button type="button" id="profile-analyze-btn" class="btn-primary" onclick="analyzeProfile()" style="margin-top:8px;width:100%">✨ AIで分析・保存</button>
+          <div id="profile-result" style="display:none;margin-top:12px"></div>
+        </section>
+
+        <div class="settings-group-label" style="margin-top:20px">📡 ニュースソース</div>
+        <section class="settings-section">
+          <h3>取得するソースを選択</h3>
+          <div id="source-settings"></div>
         </section>
 
         <button class="btn-primary settings-save" onclick="saveSettings()">設定を保存する</button>
@@ -226,6 +292,15 @@
       <button class="tab-btn"        data-tab="archive"  onclick="switchTab('archive')"><span class="tab-icon">📋</span><span>履歴</span></button>
       <button class="tab-btn"        data-tab="settings" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span><span>設定</span></button>
     </nav>
+  </div>
+
+  <!-- 原稿テキスト：背後に配置、目に見えないがアクセシビリティツリーに存在 -->
+  <div id="rm-bg-text" aria-hidden="true"></div>
+
+  <!-- 読み上げモード中に表示するバッジ -->
+  <div id="rm-badge" style="display:none" aria-hidden="true">
+    <span>☝️☝️ 2本指で上からスワイプ → O-Ren 読み上げ開始</span>
+    <button onclick="closeReadingMode()">終了</button>
   </div>
 
 </div>
