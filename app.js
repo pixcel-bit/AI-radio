@@ -1559,32 +1559,31 @@ function openReadingMode() {
   }
   if (!text) { showToast('原稿がありません。先にニュースを読み込んでください'); return; }
 
-  const rmEl = $('reading-mode');
-  const content = $('rm-content');
-  if (!rmEl || !content) { showToast('読み上げモードを初期化できませんでした'); return; }
-
-  content.innerHTML = '';
+  // 背後に原稿テキストを配置（透明・タッチ無効）
+  const bgText = $('rm-bg-text');
+  bgText.innerHTML = '';
   text.split(/\n+/).filter(l => l.trim()).forEach(line => {
     const p = document.createElement('p');
     p.textContent = line;
-    content.appendChild(p);
+    bgText.appendChild(p);
   });
 
-  // 背後のコンテンツをアクセシビリティツリーから隠す
-  // → iOS Speak Screen が reading-mode の内容だけを読む
+  // 通常UIをアクセシビリティツリーから除外 → Speak Screen は背後テキストだけ読む
   $('screen-main')?.setAttribute('aria-hidden', 'true');
   $('screen-onboarding')?.setAttribute('aria-hidden', 'true');
+  bgText.removeAttribute('aria-hidden');
 
-  rmEl.style.display = 'block';
-  rmEl.scrollTop = 0;
+  $('rm-badge').style.display = 'flex';
   if (typeof mainSpeaking !== 'undefined' && mainSpeaking) toggleMainSpeak();
 }
 
 function closeReadingMode() {
-  const rmEl = $('reading-mode');
-  if (rmEl) rmEl.style.display = 'none';
+  const bgText = $('rm-bg-text');
+  bgText.setAttribute('aria-hidden', 'true');
+  bgText.innerHTML = '';
   $('screen-main')?.removeAttribute('aria-hidden');
   $('screen-onboarding')?.removeAttribute('aria-hidden');
+  $('rm-badge').style.display = 'none';
 }
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────

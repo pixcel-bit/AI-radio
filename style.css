@@ -262,83 +262,49 @@ html, body {
   color: white;
 }
 
-#reading-mode {
+/* 背後テキスト：視覚的に不可視、アクセシビリティツリーには存在 */
+#rm-bg-text {
   position: fixed;
   inset: 0;
-  z-index: 200;
-  background: var(--bg);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-top: var(--safe-top);
-  padding-bottom: var(--safe-bottom);
-}
-
-.rm-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.rm-instruction {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-.rm-gesture {
-  font-size: 22px;
-  flex-shrink: 0;
-  letter-spacing: -4px;
-}
-
-.rm-guide {
-  display: flex;
-  flex-direction: column;
-  font-size: 12px;
-  line-height: 1.5;
-  gap: 1px;
-}
-.rm-guide strong {
-  font-size: 13px;
-  color: #4a9eff;
-}
-.rm-guide span {
-  color: var(--text-muted);
-}
-.rm-guide-sub {
-  font-size: 10px;
-  opacity: 0.7;
-}
-
-.rm-close-btn {
-  flex-shrink: 0;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.rm-content {
-  padding: 20px 20px 60px;
-}
-.rm-content p {
+  z-index: 0;
+  color: transparent;
+  pointer-events: none;
+  overflow: hidden;
+  padding: 60px 20px 100px;
   font-size: 17px;
   line-height: 2;
+}
+
+/* 読み上げモード中の小バッジ */
+#rm-badge {
+  position: fixed;
+  bottom: calc(var(--tab-h) + var(--safe-bottom) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  background: #1a3a5c;
+  border: 1px solid #4a9eff;
   color: var(--text);
-  margin-bottom: 12px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  font-size: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+#rm-badge span { color: #88bbff; }
+#rm-badge button {
+  background: #4a9eff;
+  border: none;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
 }
 
 .player-date {

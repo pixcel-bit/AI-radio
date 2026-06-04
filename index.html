@@ -291,20 +291,13 @@
     </nav>
   </div>
 
-  <!-- ========== 原稿読み上げモード（iOS Speak Screen 用） ========== -->
-  <div id="reading-mode" style="display:none" aria-live="polite">
-    <div class="rm-header" aria-hidden="true">
-      <div class="rm-instruction">
-        <div class="rm-gesture">☝️☝️</div>
-        <div class="rm-guide">
-          <strong>2本指で上からスワイプ</strong>
-          <span>→ iOSがO-Renで読み上げ開始</span>
-          <span class="rm-guide-sub">画面の読み上げ機能を使用</span>
-        </div>
-      </div>
-      <button class="rm-close-btn" onclick="closeReadingMode()">✕ 閉じる</button>
-    </div>
-    <div id="rm-content" class="rm-content"></div>
+  <!-- 原稿テキスト：背後に配置、目に見えないがアクセシビリティツリーに存在 -->
+  <div id="rm-bg-text" aria-hidden="true"></div>
+
+  <!-- 読み上げモード中に表示するバッジ -->
+  <div id="rm-badge" style="display:none" aria-hidden="true">
+    <span>☝️☝️ 2本指で上からスワイプ → O-Ren 読み上げ開始</span>
+    <button onclick="closeReadingMode()">終了</button>
   </div>
 
 </div>
