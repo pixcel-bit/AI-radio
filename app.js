@@ -1560,6 +1560,19 @@ function resolveVoice(name) {
   return _cachedVoices.find(v => v.name === name) || null;
 }
 
+function reloadVoices() {
+  // iOS は speechSynthesis を一度キャンセルすると声リストが再ロードされることがある
+  speechSynthesis.cancel();
+  _cachedVoices = [];
+  setTimeout(() => {
+    const live = speechSynthesis.getVoices();
+    if (live.length > 0) _cachedVoices = live;
+    populateVoiceSelector();
+    const count = _cachedVoices.filter(v => v.lang.startsWith('ja')).length;
+    showToast(`日本語の声: ${count}件`);
+  }, 300);
+}
+
 function testVoice() {
   const sel = $('setting-voice');
   const name = sel ? sel.value : '';

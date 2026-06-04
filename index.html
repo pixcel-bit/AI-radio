@@ -240,9 +240,10 @@
               <select id="setting-voice" style="flex:1">
                 <option value="">システムデフォルト</option>
               </select>
+              <button type="button" class="btn-test-voice" onclick="reloadVoices()">↺</button>
               <button type="button" class="btn-test-voice" onclick="testVoice()">テスト</button>
             </div>
-            <small>iOSではKyokoのみ表示される場合があります（Web Speech APIはコンパクト品質の声のみ対応。O-Renを追加するにはiOS設定 → アクセシビリティ → 読み上げコンテンツ → 声 → 日本語でコンパクト版をダウンロード）</small>
+            <small>声が少ない場合は ↺ で再読み込み。ChromeよりSafariで開くと多くの声が使えることがあります</small>
           </label>
           <label>
             <span>オープニング定型文 <small>（任意）</small></span>
