@@ -993,10 +993,10 @@ function jumpToNewsAndPlay(newsIdx) {
   const perChunk = mainChunks.length / items.length;
 
   if (newsIdx === 0) {
-    // 1件目はイントロ直後 = チャンク0から再生
     stopMainSpeak();
     mainChunkIdx = 0;
     startMainSpeak();
+    if (_isReadingModeActive()) _setRmBgText(0);
     return;
   }
 
@@ -1009,6 +1009,7 @@ function jumpToNewsAndPlay(newsIdx) {
         stopMainSpeak();
         mainChunkIdx = i;
         startMainSpeak();
+        if (_isReadingModeActive()) _setRmBgText(i);
         return;
       }
     }
@@ -1018,6 +1019,7 @@ function jumpToNewsAndPlay(newsIdx) {
   stopMainSpeak();
   mainChunkIdx = Math.min(Math.floor(perChunk * 0.5 + newsIdx * perChunk), mainChunks.length - 1);
   startMainSpeak();
+  if (_isReadingModeActive()) _setRmBgText(mainChunkIdx);
 }
 
 // ─── 深掘りモーダル & ロジック ────────────────────────────────────────────────
@@ -1551,30 +1553,43 @@ async function callClaude(system, userMsg) {
 }
 
 // ─── 原稿読み上げモード（iOS Speak Screen 用） ────────────────────────────
-function openReadingMode() {
-  const scriptEl = $('home-script');
-  let text = scriptEl ? scriptEl.textContent.trim() : '';
-  if (!text && typeof mainChunks !== 'undefined' && mainChunks.length) {
-    text = mainChunks.join('');
-  }
-  if (!text) { showToast('原稿がありません。先にニュースを読み込んでください'); return; }
-
-  // 背後に原稿テキストを配置（透明・タッチ無効）
+function _setRmBgText(fromIdx) {
   const bgText = $('rm-bg-text');
+  if (!bgText) return false;
+
+  // mainChunks があれば指定位置以降を使用、なければ home-script 全文
+  let text = '';
+  if (mainChunks && mainChunks.length) {
+    text = mainChunks.slice(fromIdx || 0).join('');
+  }
+  if (!text) {
+    const scriptEl = $('home-script');
+    text = scriptEl ? scriptEl.textContent.trim() : '';
+  }
+  if (!text) return false;
+
   bgText.innerHTML = '';
   text.split(/\n+/).filter(l => l.trim()).forEach(line => {
     const p = document.createElement('p');
     p.textContent = line;
     bgText.appendChild(p);
   });
+  return true;
+}
+
+function openReadingMode() {
+  if (!_setRmBgText(mainChunkIdx)) {
+    showToast('原稿がありません。先にニュースを読み込んでください');
+    return;
+  }
 
   // 通常UIをアクセシビリティツリーから除外 → Speak Screen は背後テキストだけ読む
   $('screen-main')?.setAttribute('aria-hidden', 'true');
   $('screen-onboarding')?.setAttribute('aria-hidden', 'true');
-  bgText.removeAttribute('aria-hidden');
+  $('rm-bg-text').removeAttribute('aria-hidden');
 
   $('rm-badge').style.display = 'flex';
-  if (typeof mainSpeaking !== 'undefined' && mainSpeaking) toggleMainSpeak();
+  if (mainSpeaking) toggleMainSpeak();
 }
 
 function closeReadingMode() {
@@ -1584,6 +1599,10 @@ function closeReadingMode() {
   $('screen-main')?.removeAttribute('aria-hidden');
   $('screen-onboarding')?.removeAttribute('aria-hidden');
   $('rm-badge').style.display = 'none';
+}
+
+function _isReadingModeActive() {
+  return $('rm-badge')?.style.display === 'flex';
 }
 
 // ─── ユーティリティ ───────────────────────────────────────────────────────
