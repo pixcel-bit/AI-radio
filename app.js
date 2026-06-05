@@ -642,6 +642,9 @@ async function loadToday() {
 
 async function regenerateToday() {
   stopMainSpeak();
+  // 削除前に今日のタイトルを既出リストへ保存（fix以前のキャッシュも対象にするため）
+  const current = S.getCachedBroadcast(todayStr());
+  if (current) S.addSeenTitles((current.news_items || []).map(n => n.title));
   S.delCachedBroadcast(todayStr());
   await loadToday();
 }
