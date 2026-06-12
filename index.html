@@ -198,10 +198,10 @@
         <section class="settings-section">
           <h3>ニュースの絞り込み</h3>
           <label>
-            <span>最大ニュース件数</span>
+            <span>ニュースの件数 <small id="setting-total-time"></small></span>
             <div class="range-row">
               <input type="range" id="setting-max" min="5" max="25" step="1" value="15"
-                     oninput="$('setting-max-val').textContent=this.value+'件'">
+                     oninput="$('setting-max-val').textContent=this.value+'件'; updateTotalTime()">
               <span id="setting-max-val">15件</span>
             </div>
           </label>
@@ -223,8 +223,14 @@
         <section class="settings-section">
           <h3>番組スタイル</h3>
           <label>
-            <span>番組の長さ <small>（分）</small></span>
-            <input type="number" id="setting-length-min" min="1" max="120" value="5" style="width:80px">
+            <span>1件あたりの時間</span>
+            <select id="setting-time-per-item" onchange="updateTotalTime()">
+              <option value="0.5">約30秒（さらっと）</option>
+              <option value="1" selected>約1分（標準）</option>
+              <option value="1.5">約1分半（しっかり）</option>
+              <option value="2">約2分（じっくり）</option>
+              <option value="3">約3分（詳しく）</option>
+            </select>
           </label>
           <label>
             <span>ナレーションのトーン</span>
