@@ -518,9 +518,9 @@ async function init() {
 
   // 画面復帰時: Wake Lock 再取得 + speechSynthesis が一時停止していれば再開
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && mainSpeaking) {
-      acquireWakeLock();
-      if (window.speechSynthesis?.paused) window.speechSynthesis.resume();
+    if (document.visibilityState === 'visible') {
+      if (_generating || mainSpeaking || duoSpeaking) acquireWakeLock();
+      if (mainSpeaking && window.speechSynthesis?.paused) window.speechSynthesis.resume();
     }
   });
 
@@ -573,6 +573,7 @@ async function loadToday() {
 
   setHomeState('generating');
   $('home-gen-msg').textContent = '今日のニュースを取得中...';
+  _generating = true;
   acquireWakeLock();
 
   try {
@@ -647,9 +648,11 @@ async function loadToday() {
 
     const broadcast = { date: today, news_items: items, script, generated_at: new Date().toISOString() };
     S.setCachedBroadcast(today, broadcast);
+    _generating = false;
     releaseWakeLock();
     showPlayer(broadcast);
   } catch (e) {
+    _generating = false;
     releaseWakeLock();
     setHomeState('error');
     $('home-error-msg').textContent = e.message;
@@ -849,6 +852,7 @@ let mainChunks   = [];
 let mainChunkIdx = 0;
 let mainSpeaking = false;
 let mainSpeed    = 1.0;
+let _generating  = false;
 
 // ─── NoSleep（画面OFF防止）──────────────────────────────────────────────────
 // Android Chrome: Wake Lock API  /  iOS Chrome/Safari: 無音動画ループ
