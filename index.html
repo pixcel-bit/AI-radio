@@ -113,6 +113,10 @@
           <summary>今日のニュース一覧</summary>
           <ul class="news-list" id="home-news-list"></ul>
         </details>
+        <div id="company-news-section" style="display:none">
+          <div class="company-news-divider">担当企業ニュース</div>
+          <ul class="news-list" id="company-news-list"></ul>
+        </div>
         <details class="news-detail">
           <summary>放送原稿を読む</summary>
           <div class="script-text" id="home-script"></div>
@@ -283,6 +287,17 @@
           <textarea id="profile-input" rows="4" style="margin-top:8px" placeholder="例: テックタッチのCS担当として、B2B SaaSの動向とAI活用に強い関心があります。エンタープライズ向けのAI導入事例、カスタマーサクセスに関する情報を優先してほしいです。スポーツや芸能ニュースは不要です。"></textarea>
           <button type="button" id="profile-analyze-btn" class="btn-primary" onclick="analyzeProfile()" style="margin-top:8px;width:100%">✨ AIで分析・保存</button>
           <div id="profile-result" style="display:none;margin-top:12px"></div>
+        </section>
+
+        <div class="settings-group-label" style="margin-top:20px">🏢 担当企業ウォッチ</div>
+        <section class="settings-section">
+          <h3>ウォッチ企業リスト</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px">直近7日間のニュースを毎回チェックします。一度取り上げた記事はスキップされます。</p>
+          <ul id="watch-company-list" style="list-style:none;padding:0;margin:0 0 10px"></ul>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input type="text" id="watch-company-input" placeholder="企業名を追加" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text)">
+            <button type="button" onclick="addWatchCompany()" class="btn-primary" style="padding:8px 14px">追加</button>
+          </div>
         </section>
 
         <div class="settings-group-label" style="margin-top:20px">📡 ニュースソース</div>

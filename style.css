@@ -475,6 +475,38 @@ details[open] .news-detail summary::before,
 }
 .news-source-link:active { border-color: var(--accent2); }
 
+/* ── 担当企業ニュース ── */
+.company-news-divider {
+  margin: 16px 16px 0;
+  padding: 10px 14px;
+  background: var(--accent);
+  color: white;
+  border-radius: 10px 10px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.company-news-header {
+  padding: 8px 12px 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  list-style: none;
+  border-bottom: 1px solid var(--border);
+  margin-top: 6px;
+}
+.company-news-item {
+  border-left: 3px solid var(--accent);
+}
+#company-news-list {
+  padding: 4px 12px 12px;
+  margin: 0 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+}
+
 .script-text {
   padding: 0 16px 16px;
   font-size: 13px;

@@ -28,9 +28,29 @@ const S = {
       crossSourceEnabled: true,
       playMode:           'voice',
       maxPerCategory:     2,
+      watchCompanies: [
+        { name: '本田技研工業',       code: '7267' },
+        { name: 'レゾナック',         code: '4004' },
+        { name: '神戸製鋼所',         code: '5406' },
+        { name: 'KDDI',               code: '9433' },
+        { name: '日本酸素ホールディングス', code: '4091' },
+        { name: '渡辺パイプ',         code: null   },
+        { name: '五洋建設',           code: '1893' },
+        { name: '日清紡マイクロデバイス', code: null },
+        { name: 'オムロン',           code: '6645' },
+        { name: 'トヨタ車体',         code: '7975' },
+        { name: 'キーエンス',         code: '6861' },
+      ],
     });
   },
   saveSettings(cfg) { LS.setJSON('nr_settings', cfg); },
+
+  getCompanySeenTitles() { return LS.getJSON('nr_company_seen', []); },
+  addCompanySeenTitles(titles) {
+    const seen = new Set(this.getCompanySeenTitles());
+    titles.forEach(t => seen.add(t));
+    LS.setJSON('nr_company_seen', [...seen].slice(-1000));
+  },
 
   getCachedBroadcast(date) { return LS.getJSON(`nr_broadcast_${date}`); },
   setCachedBroadcast(date, data) {
@@ -176,6 +196,77 @@ async function fetchAllRSS() {
     }
   }
   return items;
+}
+
+// ─── 担当企業ウォッチ ──────────────────────────────────────────────────────
+async function fetchCompanyNews(company) {
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const urls = [
+    `https://news.google.com/rss/search?q=${encodeURIComponent(company.name)}&hl=ja&gl=JP&ceid=JP:ja`,
+  ];
+  if (company.code) {
+    urls.push(`https://irbank.net/${company.code}/rss`);
+  }
+
+  const all = [];
+  for (const url of urls) {
+    try {
+      const xml   = await fetchViaProxy(url);
+      const items = parseRSS(xml, company.name, '企業');
+      all.push(...items);
+    } catch { /* ignore per-source failures */ }
+  }
+
+  const seen = new Set();
+  return all.filter(item => {
+    if (seen.has(item.title)) return false;
+    seen.add(item.title);
+    if (item.pub_date) {
+      const t = new Date(item.pub_date).getTime();
+      if (!isNaN(t) && t < sevenDaysAgo) return false;
+    }
+    return true;
+  });
+}
+
+async function fetchAllCompanyNews() {
+  const companies = S.settings.watchCompanies || [];
+  if (!companies.length) return [];
+
+  const seenTitles = new Set(S.getCompanySeenTitles());
+  const results = await Promise.allSettled(
+    companies.map(c => fetchCompanyNews(c).then(items => ({ company: c.name, items })))
+  );
+
+  return results
+    .filter(r => r.status === 'fulfilled')
+    .map(r => r.value)
+    .map(({ company, items }) => ({
+      company,
+      items: items.filter(item => !seenTitles.has(item.title)).slice(0, 3),
+    }))
+    .filter(({ items }) => items.length > 0);
+}
+
+async function generateCompanySection(companyNewsMap, cfg) {
+  const newsText = companyNewsMap.map(({ company, items }) =>
+    `【${company}】\n` + items.map(n => `・${n.title}${n.summary ? '　' + n.summary.slice(0, 80) : ''}`).join('\n')
+  ).join('\n\n');
+
+  const timePerItem = cfg.timePerItem || 1;
+  const system = `あなたはプロのラジオパーソナリティです。
+担当企業の最新ニュースを、クライアントワーク担当者向けに読み上げる原稿を作成してください。
+
+ルール:
+- 冒頭に「続いて、担当企業の最新動向をお伝えします。」と入れてください
+- 企業ごとに「次は〇〇です。」と切り替えてください
+- 各企業は1〜2文で簡潔にまとめてください（1件あたり約${timePerItem}分）
+- ビジネス的な観点（業績・提携・製品・人事・市場への影響）を意識して紹介してください
+- 末尾に「以上、担当企業ニュースでした。」と締めてください
+- です・ます調、話し言葉、アルファベットはカタカナ表記
+- 出力は原稿テキストのみ（見出し・箇条書き不要）`;
+
+  return callClaude(system, `以下の企業ニュースを原稿にしてください:\n\n${newsText}`);
 }
 
 function $(id) { return document.getElementById(id); }
@@ -646,7 +737,23 @@ async function loadToday() {
     $('home-gen-msg').textContent = 'AIが放送原稿を作成中...';
     const script = await generateScript(items, cfg, prefs);
 
-    const broadcast = { date: today, news_items: items, script, generated_at: new Date().toISOString() };
+    $('home-gen-msg').textContent = '担当企業ニュースを確認中...';
+    const companyNewsMap = await fetchAllCompanyNews();
+    let companyScript = '';
+    if (companyNewsMap.length > 0) {
+      $('home-gen-msg').textContent = '担当企業ニュースの原稿を作成中...';
+      companyScript = await generateCompanySection(companyNewsMap, cfg);
+      const allCompanyTitles = companyNewsMap.flatMap(({ items }) => items.map(n => n.title));
+      S.addCompanySeenTitles(allCompanyTitles);
+    }
+    const fullScript = companyScript ? script + '\n\n' + companyScript : script;
+
+    const broadcast = {
+      date: today, news_items: items,
+      script: fullScript,
+      company_items: companyNewsMap,
+      generated_at: new Date().toISOString(),
+    };
     S.setCachedBroadcast(today, broadcast);
     _generating = false;
     releaseWakeLock();
@@ -661,9 +768,12 @@ async function loadToday() {
 
 async function regenerateToday() {
   stopMainSpeak();
-  // 削除前に今日のタイトルを既出リストへ保存（fix以前のキャッシュも対象にするため）
   const current = S.getCachedBroadcast(todayStr());
-  if (current) S.addSeenTitles((current.news_items || []).map(n => n.title));
+  if (current) {
+    S.addSeenTitles((current.news_items || []).map(n => n.title));
+    const companyTitles = (current.company_items || []).flatMap(({ items }) => items.map(n => n.title));
+    if (companyTitles.length) S.addCompanySeenTitles(companyTitles);
+  }
   S.delCachedBroadcast(todayStr());
   await loadToday();
 }
@@ -959,6 +1069,38 @@ function showPlayer(broadcast, isYesterday = false) {
     li.dataset.newsIndex = idx;
     list.appendChild(li);
   });
+
+  // 担当企業ニュースセクション
+  const companySection = $('company-news-section');
+  if (companySection) {
+    const companyItems = broadcast.company_items || [];
+    if (companyItems.length > 0) {
+      companySection.style.display = '';
+      const companyList = $('company-news-list');
+      companyList.innerHTML = '';
+      companyItems.forEach(({ company, items }) => {
+        const header = document.createElement('li');
+        header.className = 'company-news-header';
+        header.textContent = company;
+        companyList.appendChild(header);
+        items.forEach(item => {
+          const li = document.createElement('li');
+          li.className = 'news-item company-news-item';
+          li.innerHTML = `
+            <div class="news-item-meta">
+              <span class="news-cat">企業</span>
+              <span class="news-src">${escHtml(item.source || company)}</span>
+            </div>
+            <div class="news-title">${escHtml(item.title || '')}</div>
+            ${item.summary ? `<div class="news-summary">${escHtml(item.summary)}</div>` : ''}
+            ${item.url ? `<a class="news-source-link" href="${escHtml(item.url)}" target="_blank" rel="noopener">元記事を読む →</a>` : ''}`;
+          companyList.appendChild(li);
+        });
+      });
+    } else {
+      companySection.style.display = 'none';
+    }
+  }
 
   // モードに応じた初期アクション
   _applyPlayModeUI(getPlayMode());
@@ -1457,6 +1599,7 @@ function populateSettings() {
   $('setting-cross-source').checked = cfg.crossSourceEnabled !== false;
   _applyPlayModeUI(cfg.playMode || 'voice');
   renderCustomCategories();
+  renderWatchCompanies();
   renderSourceSettings();
   const profile = S.settings.aiProfile;
   if ($('profile-input')) $('profile-input').value = profile?.profileText || '';
@@ -1773,6 +1916,41 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ─── 担当企業ウォッチ設定 ─────────────────────────────────────────────────
+function renderWatchCompanies() {
+  const ul = $('watch-company-list');
+  if (!ul) return;
+  const companies = S.settings.watchCompanies || [];
+  ul.innerHTML = '';
+  companies.forEach((c, i) => {
+    const li = document.createElement('li');
+    li.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)';
+    li.innerHTML = `<span style="font-size:14px">${escHtml(c.name)}</span>
+      <button type="button" onclick="removeWatchCompany(${i})" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:0 4px">×</button>`;
+    ul.appendChild(li);
+  });
+}
+
+function addWatchCompany() {
+  const input = $('watch-company-input');
+  const name  = input.value.trim();
+  if (!name) return;
+  const cfg = S.settings;
+  if (!(cfg.watchCompanies || []).some(c => c.name === name)) {
+    cfg.watchCompanies = [...(cfg.watchCompanies || []), { name, code: null }];
+    S.saveSettings(cfg);
+  }
+  input.value = '';
+  renderWatchCompanies();
+}
+
+function removeWatchCompany(idx) {
+  const cfg = S.settings;
+  cfg.watchCompanies = (cfg.watchCompanies || []).filter((_, i) => i !== idx);
+  S.saveSettings(cfg);
+  renderWatchCompanies();
 }
 
 // ─── カスタムカテゴリ ─────────────────────────────────────────────────────
