@@ -735,7 +735,7 @@ async function loadToday() {
     if (!items.length) items = allItems.slice(0, 5);
 
     $('home-gen-msg').textContent = 'AIが放送原稿を作成中...';
-    const script = await generateScript(items, cfg, prefs);
+    const script = await generateScript(items, cfg);
 
     $('home-gen-msg').textContent = '担当企業ニュースを確認中...';
     const companyNewsMap = await fetchAllCompanyNews();
@@ -778,38 +778,27 @@ async function regenerateToday() {
   await loadToday();
 }
 
-async function generateScript(items, cfg, prefs = null) {
-  const timePerItem = cfg.timePerItem || (cfg.lengthMinutes ? cfg.lengthMinutes / Math.max(items.length, 1) : 1);
+async function generateScript(items, cfg) {
+  const timePerItem = cfg.timePerItem || 1;
   const lengthMin   = Math.round(items.length * timePerItem);
   const lengthText  = `約${lengthMin}分（${lengthMin * 160}字程度）`;
-  const toneMap   = { casual: 'カジュアルで親しみやすい', professional: '落ち着いたプロフェッショナルな', cheerful: '元気で明るい朝らしい' };
+  const toneMap     = { casual: 'カジュアルで親しみやすい', professional: '落ち着いたプロフェッショナルな', cheerful: '元気で明るい朝らしい' };
 
   const intro      = cfg.customIntro ? `冒頭に必ず次の文を入れてください: 「${cfg.customIntro}」\n\n` : '';
   const customCats = (cfg.customCategories || []).filter(Boolean);
-  const customLine = customCats.length ? `- カスタムテーマ（以下のトピックを優先して取り上げてください）: ${customCats.join('、')}\n` : '';
-  const prefLine     = prefs && prefs.total > 0
-    ? `- リスナーの好み（グッドボタン実績より）: 関心カテゴリ「${prefs.topCategories.join('・')}」、関心キーワード「${prefs.topKeywords.slice(0, 5).join('・')}」。これらに関連するニュースはより熱意を持って詳しく紹介してください。\n`
-    : '';
-  const dislikeLine  = prefs && prefs.dislikeTotal > 0
-    ? `- 興味なし（バッドボタン実績より）: カテゴリ「${Object.keys(prefs.dislikeCatCount).join('・')}」、キーワード「${prefs.topDislikeKeywords.slice(0, 5).join('・')}」。これらのトピックは1〜2文で簡潔に紹介してください（省略は不可）。\n`
-    : '';
-  const profile      = cfg.aiProfile;
-  const profileLine  = profile?.profileText
-    ? `- ユーザーの好みプロファイル: ${profile.profileText}${profile.positiveAngles?.length ? `（重視する視点: ${profile.positiveAngles.join('・')}）` : ''}。\n`
-    : '';
+  const customLine = customCats.length ? `- カスタムテーマ「${customCats.join('・')}」に関するニュースは特に丁寧に紹介してください\n` : '';
 
   const system = `あなたはプロのラジオパーソナリティです。
 以下のニュース情報をもとに、${lengthText}のラジオ放送原稿を作成してください。
 トーンは${toneMap[cfg.tone] || toneMap.casual}口調です。
 ${intro}ルール:
-${customLine}${prefLine}${dislikeLine}${profileLine}- です・ます調で自然な話し言葉
+${customLine}- です・ます調で自然な話し言葉
 - 難しい用語は噛み砕いて説明
 - 出力は原稿テキストのみ（見出し・箇条書き・記号・マークダウン不要）
 - 数字は日本語の読みに合わせて表記（例: 2025年→二〇二五年、1兆円→一兆円）
 - 英語・アルファベット略語はカタカナのみで書き、アルファベット表記は一切使わない（例: AI→エーアイ、GDP→ジーディーピー、SaaS→サース）
 - 文末は必ず「。」で終わらせ、読み上げ時に自然な間が取れるようにする
-- 提供した全ニュースを必ず原稿に含めてください。1件あたり約${timePerItem}分を目安に、件数が多い場合は各ニュースを短くまとめてください
-- 2件目以降のニュースに移る際は必ず「次のニュースです。」という一文を入れてください（1件目の前は不要）`;
+- 全${items.length}件すべてを原稿に含め、2件目以降は「次のニュースです。」でつないでください`;
 
   const newsText = items.map((n, i) => `${i + 1}. 【${n.category}】${n.title}\n${n.summary || ''}`).join('\n\n');
 
