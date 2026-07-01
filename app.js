@@ -29,17 +29,17 @@ const S = {
       playMode:           'voice',
       maxPerCategory:     2,
       watchCompanies: [
-        { name: '本田技研工業',           code: '7267' },
-        { name: 'レゾナック',             code: '4004' },
-        { name: '神戸製鋼所',             code: '5406' },
-        { name: 'KDDI',                   code: '9433' },
-        { name: '日本酸素ホールディングス', code: '4091' },
-        { name: '渡辺パイプ',             code: null   },
-        { name: '五洋建設',               code: '1893' },
-        { name: '日清紡マイクロデバイス', code: null   },
-        { name: 'オムロン',               code: '6645' },
-        { name: 'トヨタ車体',             code: '7975' },
-        { name: 'キーエンス',             code: '6861' },
+        { name: '本田技研工業',           code: '7267', prtimes_id: null },
+        { name: 'レゾナック',             code: '4004', prtimes_id: null },
+        { name: '神戸製鋼所',             code: '5406', prtimes_id: null },
+        { name: 'KDDI',                   code: '9433', prtimes_id: null },
+        { name: '日本酸素ホールディングス', code: '4091', prtimes_id: null },
+        { name: '渡辺パイプ',             code: null,   prtimes_id: null },
+        { name: '五洋建設',               code: '1893', prtimes_id: null },
+        { name: '日清紡マイクロデバイス', code: null,   prtimes_id: null },
+        { name: 'オムロン',               code: '6645', prtimes_id: null },
+        { name: 'トヨタ車体',             code: '7975', prtimes_id: null },
+        { name: 'キーエンス',             code: '6861', prtimes_id: null },
       ],
     };
     const saved = LS.getJSON('nr_settings', {});
@@ -212,17 +212,55 @@ function getCompanyMatchTerms(company) {
   return terms;
 }
 
-function fetchAllCompanyNews(allItems) {
+async function fetchCompanyDedicatedNews(company) {
+  const items = [];
+
+  // ① 株探RSS（上場企業・証券コードあり）
+  if (company.code) {
+    try {
+      const code = String(company.code).padStart(4, '0');
+      const xml  = await fetchViaProxy(`https://kabutan.jp/rss/news/?code=${code}`);
+      items.push(...parseRSS(xml, `株探`, '企業'));
+    } catch {}
+  }
+
+  // ② PR TIMES（prtimes_id が設定されている企業のみ）
+  if (company.prtimes_id) {
+    try {
+      const xml = await fetchViaProxy(`https://prtimes.jp/rss/all.rss?company_id=${company.prtimes_id}`);
+      items.push(...parseRSS(xml, 'PR TIMES', '企業'));
+    } catch {}
+  }
+
+  return items;
+}
+
+async function fetchAllCompanyNews(allItems) {
   const companies  = S.settings.watchCompanies || [];
   const seenTitles = new Set(S.getCompanySeenTitles());
 
-  return companies.map(company => {
-    const terms = getCompanyMatchTerms(company);
-    const items = allItems.filter(item => {
-      if (seenTitles.has(item.title)) return false;
+  // 専用ソース（株探・PR TIMES）を全社並列取得
+  const dedicated = await Promise.allSettled(
+    companies.map(c => fetchCompanyDedicatedNews(c))
+  );
+
+  return companies.map((company, i) => {
+    const terms        = getCompanyMatchTerms(company);
+    const fromGeneral  = allItems.filter(item => {
       const text = `${item.title} ${item.summary || ''}`;
       return terms.some(t => text.includes(t));
+    });
+    const fromDedicated = dedicated[i].status === 'fulfilled' ? dedicated[i].value : [];
+
+    // 専用ソース優先・一般RSS補完・重複除去・既読スキップ
+    const seen = new Set();
+    const items = [...fromDedicated, ...fromGeneral].filter(item => {
+      if (seenTitles.has(item.title)) return false;
+      if (seen.has(item.title))       return false;
+      seen.add(item.title);
+      return true;
     }).slice(0, 3);
+
     return { company: company.name, items };
   }).filter(({ items }) => items.length > 0);
 }
@@ -717,7 +755,7 @@ async function loadToday() {
     const script = await generateScript(items, cfg);
 
     $('home-gen-msg').textContent = '担当企業ニュースを確認中...';
-    const companyNewsMap = fetchAllCompanyNews(allItems);
+    const companyNewsMap = await fetchAllCompanyNews(allItems);
     let companyScript = '';
     if (companyNewsMap.length > 0) {
       $('home-gen-msg').textContent = '担当企業ニュースの原稿を作成中...';
@@ -1899,11 +1937,29 @@ function renderWatchCompanies() {
   ul.innerHTML = '';
   companies.forEach((c, i) => {
     const li = document.createElement('li');
-    li.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)';
-    li.innerHTML = `<span style="font-size:14px">${escHtml(c.name)}</span>
-      <button type="button" onclick="removeWatchCompany(${i})" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:0 4px">×</button>`;
+    li.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border)';
+    li.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:14px;font-weight:600">${escHtml(c.name)}</span>
+        <button type="button" onclick="removeWatchCompany(${i})" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:0 4px">×</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:var(--text-muted);min-width:80px">PR TIMES ID</span>
+        <input type="text" placeholder="例: 1130" value="${escHtml(c.prtimes_id || '')}"
+          style="flex:1;padding:4px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"
+          onchange="updatePrtimesId(${i}, this.value)">
+        ${c.prtimes_id ? '<span style="font-size:11px;color:var(--accent)">✓ 設定済み</span>' : '<span style="font-size:11px;color:var(--text-muted)"><a href="https://prtimes.jp" target="_blank" rel="noopener" style="color:inherit">prtimes.jp</a>で検索</span>'}
+      </div>`;
     ul.appendChild(li);
   });
+}
+
+function updatePrtimesId(idx, value) {
+  const cfg = S.settings;
+  if (!cfg.watchCompanies?.[idx]) return;
+  cfg.watchCompanies[idx].prtimes_id = value.trim() || null;
+  S.saveSettings(cfg);
+  renderWatchCompanies();
 }
 
 function addWatchCompany() {
