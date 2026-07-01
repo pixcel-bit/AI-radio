@@ -54,6 +54,21 @@ const S = {
     LS.setJSON('nr_company_seen', [...seen].slice(-1000));
   },
 
+  // 企業記事の蓄積（起動ごとに追記し、7日を超えた記事は自動削除）
+  getCompanyPool() { return LS.getJSON('nr_company_pool', []); },
+  addToCompanyPool(items) {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const pool   = this.getCompanyPool().filter(i => i.saved_at > cutoff);
+    const titles = new Set(pool.map(i => i.title));
+    for (const item of items) {
+      if (!titles.has(item.title)) {
+        pool.push({ ...item, saved_at: Date.now() });
+        titles.add(item.title);
+      }
+    }
+    LS.setJSON('nr_company_pool', pool.slice(-500));
+  },
+
   getCachedBroadcast(date) { return LS.getJSON(`nr_broadcast_${date}`); },
   setCachedBroadcast(date, data) {
     LS.setJSON(`nr_broadcast_${date}`, data);
@@ -215,15 +230,27 @@ function fetchAllCompanyNews(allItems) {
   const companies = S.settings.watchCompanies || [];
   if (!companies.length) return [];
 
-  const seenTitles = new Set(S.getCompanySeenTitles());
-
-  return companies.map(company => {
+  // 今日のRSS記事から企業名マッチするものを蓄積プールに追加
+  const allMatched = [];
+  for (const company of companies) {
     const terms = getCompanyMatchTerms(company);
-    const items = allItems.filter(item => {
-      if (seenTitles.has(item.title)) return false;
+    const matched = allItems.filter(item => {
       const text = `${item.title} ${item.summary || ''}`;
       return terms.some(t => text.includes(t));
-    }).slice(0, 3);
+    }).map(item => ({ ...item, _company: company.name }));
+    allMatched.push(...matched);
+  }
+  if (allMatched.length) S.addToCompanyPool(allMatched);
+
+  // 蓄積プール（直近7日）から既読をスキップして返す
+  const seenTitles = new Set(S.getCompanySeenTitles());
+  const pool = S.getCompanyPool();
+
+  return companies.map(company => {
+    const items = pool
+      .filter(item => item._company === company.name && !seenTitles.has(item.title))
+      .sort((a, b) => b.saved_at - a.saved_at)
+      .slice(0, 3);
     return { company: company.name, items };
   }).filter(({ items }) => items.length > 0);
 }
