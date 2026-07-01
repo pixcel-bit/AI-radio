@@ -766,6 +766,11 @@ async function loadToday() {
   }
 }
 
+function clearTodayCache() {
+  S.delCachedBroadcast(todayStr());
+  showToast('キャッシュをクリアしました。ホームに戻って再生成してください。');
+}
+
 async function regenerateToday() {
   stopMainSpeak();
   const current = S.getCachedBroadcast(todayStr());
