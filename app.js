@@ -201,53 +201,31 @@ async function fetchAllRSS() {
 }
 
 // ─── 担当企業ウォッチ ──────────────────────────────────────────────────────
-async function fetchCompanyNews(company) {
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const urls = [
-    `https://news.google.com/rss/search?q=${encodeURIComponent(company.name)}&hl=ja&gl=JP&ceid=JP:ja`,
-  ];
-  if (company.code) {
-    urls.push(`https://irbank.net/${company.code}/rss`);
-  }
-
-  const all = [];
-  for (const url of urls) {
-    try {
-      const xml   = await fetchViaProxy(url);
-      const items = parseRSS(xml, company.name, '企業');
-      all.push(...items);
-    } catch { /* ignore per-source failures */ }
-  }
-
-  const seen = new Set();
-  return all.filter(item => {
-    if (seen.has(item.title)) return false;
-    seen.add(item.title);
-    if (item.pub_date) {
-      const t = new Date(item.pub_date).getTime();
-      if (!isNaN(t) && t < sevenDaysAgo) return false;
-    }
-    return true;
-  });
+function getCompanyMatchTerms(company) {
+  const terms = [company.name];
+  // 「ホールディングス」などを除いた短縮形も試みる
+  const short = company.name
+    .replace('ホールディングス', '').replace('株式会社', '')
+    .replace('グループ', '').trim();
+  if (short && short !== company.name && short.length >= 3) terms.push(short);
+  return terms;
 }
 
-async function fetchAllCompanyNews() {
+function fetchAllCompanyNews(allItems) {
   const companies = S.settings.watchCompanies || [];
   if (!companies.length) return [];
 
   const seenTitles = new Set(S.getCompanySeenTitles());
-  const results = await Promise.allSettled(
-    companies.map(c => fetchCompanyNews(c).then(items => ({ company: c.name, items })))
-  );
 
-  return results
-    .filter(r => r.status === 'fulfilled')
-    .map(r => r.value)
-    .map(({ company, items }) => ({
-      company,
-      items: items.filter(item => !seenTitles.has(item.title)).slice(0, 3),
-    }))
-    .filter(({ items }) => items.length > 0);
+  return companies.map(company => {
+    const terms = getCompanyMatchTerms(company);
+    const items = allItems.filter(item => {
+      if (seenTitles.has(item.title)) return false;
+      const text = `${item.title} ${item.summary || ''}`;
+      return terms.some(t => text.includes(t));
+    }).slice(0, 3);
+    return { company: company.name, items };
+  }).filter(({ items }) => items.length > 0);
 }
 
 async function generateCompanySection(companyNewsMap, cfg) {
@@ -740,7 +718,7 @@ async function loadToday() {
     const script = await generateScript(items, cfg);
 
     $('home-gen-msg').textContent = '担当企業ニュースを確認中...';
-    const companyNewsMap = await fetchAllCompanyNews();
+    const companyNewsMap = fetchAllCompanyNews(allItems);
     let companyScript = '';
     if (companyNewsMap.length > 0) {
       $('home-gen-msg').textContent = '担当企業ニュースの原稿を作成中...';
