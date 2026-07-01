@@ -14,7 +14,7 @@ const S = {
   markOnboarded()     { LS.set('nr_onboarded', '1'); },
 
   get settings() {
-    return LS.getJSON('nr_settings', {
+    const DEFAULTS = {
       categories:       ['主要', '社会', '政治', '経済', '国際', 'スポーツ', '科学・文化', 'テクノロジー', 'AI', 'SaaS', 'ビジネス'],
       customCategories: [],
       excludedSources:  [],
@@ -29,19 +29,21 @@ const S = {
       playMode:           'voice',
       maxPerCategory:     2,
       watchCompanies: [
-        { name: '本田技研工業',       code: '7267' },
-        { name: 'レゾナック',         code: '4004' },
-        { name: '神戸製鋼所',         code: '5406' },
-        { name: 'KDDI',               code: '9433' },
+        { name: '本田技研工業',           code: '7267' },
+        { name: 'レゾナック',             code: '4004' },
+        { name: '神戸製鋼所',             code: '5406' },
+        { name: 'KDDI',                   code: '9433' },
         { name: '日本酸素ホールディングス', code: '4091' },
-        { name: '渡辺パイプ',         code: null   },
-        { name: '五洋建設',           code: '1893' },
-        { name: '日清紡マイクロデバイス', code: null },
-        { name: 'オムロン',           code: '6645' },
-        { name: 'トヨタ車体',         code: '7975' },
-        { name: 'キーエンス',         code: '6861' },
+        { name: '渡辺パイプ',             code: null   },
+        { name: '五洋建設',               code: '1893' },
+        { name: '日清紡マイクロデバイス', code: null   },
+        { name: 'オムロン',               code: '6645' },
+        { name: 'トヨタ車体',             code: '7975' },
+        { name: 'キーエンス',             code: '6861' },
       ],
-    });
+    };
+    const saved = LS.getJSON('nr_settings', {});
+    return { ...DEFAULTS, ...saved };
   },
   saveSettings(cfg) { LS.setJSON('nr_settings', cfg); },
 
