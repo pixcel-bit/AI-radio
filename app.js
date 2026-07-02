@@ -43,7 +43,17 @@ const S = {
       ],
     };
     const saved = LS.getJSON('nr_settings', {});
-    return { ...DEFAULTS, ...saved };
+    const merged = { ...DEFAULTS, ...saved };
+    // 保存済み watchCompanies の code/prtimes_id が null なら DEFAULTS の値で補完
+    if (Array.isArray(merged.watchCompanies) && DEFAULTS.watchCompanies.length) {
+      const defMap = new Map(DEFAULTS.watchCompanies.map(c => [c.name, c]));
+      merged.watchCompanies = merged.watchCompanies.map(c => {
+        const def = defMap.get(c.name);
+        if (!def) return c;
+        return { ...c, code: c.code ?? def.code, prtimes_id: c.prtimes_id ?? def.prtimes_id };
+      });
+    }
+    return merged;
   },
   saveSettings(cfg) { LS.setJSON('nr_settings', cfg); },
 
@@ -1085,10 +1095,10 @@ function showPlayer(broadcast, isYesterday = false) {
   const companySection = $('company-news-section');
   if (companySection) {
     const companyItems = broadcast.company_items || [];
+    companySection.style.display = '';
+    const companyList = $('company-news-list');
+    companyList.innerHTML = '';
     if (companyItems.length > 0) {
-      companySection.style.display = '';
-      const companyList = $('company-news-list');
-      companyList.innerHTML = '';
       companyItems.forEach(({ company, items }) => {
         const header = document.createElement('li');
         header.className = 'company-news-header';
@@ -1109,7 +1119,11 @@ function showPlayer(broadcast, isYesterday = false) {
         });
       });
     } else {
-      companySection.style.display = 'none';
+      const li = document.createElement('li');
+      li.className = 'news-item';
+      li.style.cssText = 'color:var(--text-muted,#888);font-size:.9rem;padding:.75rem 1rem;';
+      li.textContent = '本日、担当企業のニュースは見つかりませんでした。';
+      companyList.appendChild(li);
     }
   }
 
