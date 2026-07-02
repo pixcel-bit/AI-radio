@@ -50,7 +50,7 @@ const S = {
       merged.watchCompanies = merged.watchCompanies.map(c => {
         const def = defMap.get(c.name);
         if (!def) return c;
-        return { ...c, code: c.code ?? def.code, prtimes_id: c.prtimes_id ?? def.prtimes_id };
+        return { ...c, code: c.code !== undefined ? c.code : def.code, prtimes_id: c.prtimes_id !== undefined ? c.prtimes_id : def.prtimes_id };
       });
     }
     return merged;
@@ -683,6 +683,7 @@ function onboardingSubmit() {
 
 // ─── 今日の放送 ───────────────────────────────────────────────────────────
 async function loadToday() {
+  if (_generating) return;
   setHomeState('loading');
   const today = todayStr();
 
@@ -789,7 +790,7 @@ async function loadToday() {
     // キャッシュ保存成功後に既読登録（保存失敗時にスキップを防ぐ）
     if (companyNewsMap.length > 0) {
       const allCompanyTitles = companyNewsMap.flatMap(({ items }) => items.map(n => n.title));
-      S.addCompanySeenTitles(allCompanyTitles);
+      try { S.addCompanySeenTitles(allCompanyTitles); } catch { /* ストレージ満杯時はスキップ */ }
     }
     _generating = false;
     releaseWakeLock();
@@ -803,8 +804,14 @@ async function loadToday() {
 }
 
 function clearTodayCache() {
+  // 全履歴を消さず今日分の企業既読のみ除去
+  const current = S.getCachedBroadcast(todayStr());
+  if (current?.company_items?.length) {
+    const todayTitles = new Set(current.company_items.flatMap(({ items }) => items.map(n => n.title)));
+    const remaining = S.getCompanySeenTitles().filter(t => !todayTitles.has(t));
+    LS.setJSON('nr_company_seen', remaining);
+  }
   S.delCachedBroadcast(todayStr());
-  LS.del('nr_company_seen');
   showToast('キャッシュをクリアしました。ホームに戻って再生成してください。');
 }
 
@@ -896,6 +903,7 @@ async function startDuoPreview() {
   if (!S.apiKey) { showToast('APIキーが設定されていません'); return; }
 
   if (mainSpeaking) stopMainSpeak();
+  if (duoSpeaking) stopDuo();
 
   const btn = $('duo-preview-btn');
   btn.disabled = true;
@@ -1418,7 +1426,7 @@ function readDeepDiveText(btn) {
     utt.rate = rate;
     if (voice) utt.voice = voice;
     utt.onend   = () => { idx++; setTimeout(speakNext, 150); };
-    utt.onerror = () => { if (resultDiv._playing) { idx++; setTimeout(speakNext, 150); } else { resultDiv._playing = false; btn.textContent = '▶ 読み上げ'; } };
+    utt.onerror = (e) => { if (!resultDiv._playing || e?.error === 'interrupted') { resultDiv._playing = false; btn.textContent = '▶ 読み上げ'; return; } idx++; setTimeout(speakNext, 150); };
     window.speechSynthesis.speak(utt);
   })();
 }
@@ -1509,7 +1517,7 @@ async function sendChat() {
     let newsContext = '';
     const cached = S.getCachedBroadcast(todayStr());
     if (cached) {
-      newsContext = cached.news_items.map(n => `【${n.category}】${n.title}: ${n.summary || ''}`).join('\n');
+      newsContext = (cached.news_items || []).map(n => `【${n.category}】${n.title}: ${n.summary || ''}`).join('\n');
     }
 
     const userMsg = newsContext
@@ -1567,19 +1575,23 @@ function appendChatAIBubble(container, script) {
 
 function toggleChatSpeak(btn, script) {
   if (chatSpeaking && currentChatBtn === btn) {
-    window.speechSynthesis.cancel();
-    chatSpeaking = false;
-    btn.textContent = '▶ 読み上げ';
+    chatSpeaking = false;               // cancel より先にフラグを下げて onerror を止める
     currentChatBtn = null;
+    window.speechSynthesis.cancel();
+    btn.textContent = '▶ 読み上げ';
     return;
   }
 
   if (chatSpeaking) {
+    chatSpeaking = false;               // cancel より先にフラグを下げて旧ループを止める
     window.speechSynthesis.cancel();
     if (currentChatBtn) currentChatBtn.textContent = '▶ 読み上げ';
+    currentChatBtn = null;
   }
 
   if (!window.speechSynthesis) { showToast('このブラウザは読み上げに対応していません'); return; }
+
+  stopMainSpeak();                      // メインプレイヤーと同時再生を防ぐ
 
   chatSpeaking   = true;
   currentChatBtn = btn;
@@ -1602,7 +1614,7 @@ function toggleChatSpeak(btn, script) {
     utt.rate    = rate;
     if (voice) utt.voice = voice;
     utt.onend   = () => { i++; setTimeout(speakNext, 150); };
-    utt.onerror = () => { i++; setTimeout(speakNext, 150); };
+    utt.onerror = (e) => { if (e?.error === 'interrupted') return; i++; setTimeout(speakNext, 150); };
     window.speechSynthesis.speak(utt);
   })();
 }
