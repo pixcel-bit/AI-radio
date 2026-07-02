@@ -422,6 +422,12 @@ function mergeTopics(existing, newTopics) {
       arr[idx] = { ...arr[idx], weight: Math.min(arr[idx].weight + 1, 10) };
     } else {
       if (arr.length >= TOPIC_LIMIT) arr = arr.filter(t => t.weight > 1); // 仮登録を掃除
+      // 全て weight>1 で容量が埋まっている場合は最小 weight のエントリを1つ退出させる
+      if (arr.length >= TOPIC_LIMIT) {
+        const minW = arr.reduce((m, t) => Math.min(m, t.weight), Infinity);
+        const evict = arr.findIndex(t => t.weight === minW);
+        if (evict >= 0) arr.splice(evict, 1);
+      }
       if (arr.length < TOPIC_LIMIT) arr.push({ topic: topicStr, weight: 1 });
     }
   }
@@ -770,8 +776,6 @@ async function loadToday() {
     if (companyNewsMap.length > 0) {
       $('home-gen-msg').textContent = '担当企業ニュースの原稿を作成中...';
       companyScript = await generateCompanySection(companyNewsMap, cfg);
-      const allCompanyTitles = companyNewsMap.flatMap(({ items }) => items.map(n => n.title));
-      S.addCompanySeenTitles(allCompanyTitles);
     }
     const fullScript = companyScript ? script + '\n\n' + companyScript : script;
 
@@ -782,6 +786,11 @@ async function loadToday() {
       generated_at: new Date().toISOString(),
     };
     S.setCachedBroadcast(today, broadcast);
+    // キャッシュ保存成功後に既読登録（保存失敗時にスキップを防ぐ）
+    if (companyNewsMap.length > 0) {
+      const allCompanyTitles = companyNewsMap.flatMap(({ items }) => items.map(n => n.title));
+      S.addCompanySeenTitles(allCompanyTitles);
+    }
     _generating = false;
     releaseWakeLock();
     showPlayer(broadcast);
@@ -1380,6 +1389,14 @@ function readDeepDiveText(btn) {
   const text = resultDiv.dataset.text;
   if (!text) return;
 
+  // 再クリックで停止
+  if (resultDiv._playing) {
+    resultDiv._playing = false;
+    window.speechSynthesis.cancel();
+    btn.textContent = '▶ 読み上げ';
+    return;
+  }
+
   const chunks = text.match(/[^。！？\n]+[。！？\n]?/g) || [text];
   const cfg = S.settings;
   const rate = parseFloat(cfg.speechRate || 1.0);
@@ -1387,10 +1404,12 @@ function readDeepDiveText(btn) {
   let idx = 0;
 
   stopMainSpeak();
-  btn.textContent = '⏸ 停止中';
+  resultDiv._playing = true;
+  btn.textContent = '⏸ 停止';
 
   (function speakNext() {
-    if (idx >= chunks.length) {
+    if (!resultDiv._playing || idx >= chunks.length) {
+      resultDiv._playing = false;
       btn.textContent = '▶ 読み上げ';
       return;
     }
@@ -1398,8 +1417,8 @@ function readDeepDiveText(btn) {
     utt.lang = 'ja-JP';
     utt.rate = rate;
     if (voice) utt.voice = voice;
-    utt.onend = () => { idx++; setTimeout(speakNext, 150); };
-    utt.onerror = () => { idx++; setTimeout(speakNext, 150); };
+    utt.onend   = () => { idx++; setTimeout(speakNext, 150); };
+    utt.onerror = () => { if (resultDiv._playing) { idx++; setTimeout(speakNext, 150); } else { resultDiv._playing = false; btn.textContent = '▶ 読み上げ'; } };
     window.speechSynthesis.speak(utt);
   })();
 }
@@ -1813,6 +1832,7 @@ async function callClaude(system, userMsg) {
   }
 
   const data = await res.json();
+  if (!data.content?.length) throw new Error('APIから空の応答が返りました');
   return data.content[0].text;
 }
 
