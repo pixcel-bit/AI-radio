@@ -795,6 +795,7 @@ async function loadToday() {
 
 function clearTodayCache() {
   S.delCachedBroadcast(todayStr());
+  LS.del('nr_company_seen');
   showToast('キャッシュをクリアしました。ホームに戻って再生成してください。');
 }
 
@@ -1262,7 +1263,7 @@ function jumpToNewsAndPlay(newsIdx) {
   for (let i = 0; i < mainChunks.length; i++) {
     if (mainChunks[i].includes('次のニュース')) {
       count++;
-      if (count === newsIdx) { _jumpTo(i); return; }
+      if (count === newsIdx) { _jumpTo(Math.min(i + 1, mainChunks.length - 1)); return; }
     }
   }
 
@@ -1298,7 +1299,7 @@ function showDeepDiveModal(newsIdx) {
     };
     document.body.appendChild(modal);
   } else {
-    modal.querySelector('h3').textContent = `「${escHtml(title)}」を深掘り`;
+    modal.querySelector('h3').textContent = `「${title}」を深掘り`;
   }
 
   modal.dataset.newsIndex = newsIdx;
@@ -1782,6 +1783,7 @@ function saveSettings() {
     crossSourceEnabled:  $('setting-cross-source').checked,
     playMode:            S.settings.playMode || 'voice',
     maxPerCategory:      parseInt($('setting-max-per-cat').value, 10),
+    watchCompanies:      S.settings.watchCompanies,
   });
 
   showToast('設定を保存しました ✓');
