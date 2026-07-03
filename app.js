@@ -72,7 +72,7 @@ const S = {
     idx = idx.filter(e => e.date !== date);
     idx.unshift({ date, news_count: (data.news_items || []).length });
     LS.setJSON('nr_archive_index', idx.slice(0, 30));
-    this.addSeenTitles((data.news_items || []).map(n => n.title));
+    try { this.addSeenTitles((data.news_items || []).map(n => n.title)); } catch { /* ストレージ満杯時はスキップ */ }
   },
 
   getSeenTitles() { return LS.getJSON('nr_seen_titles', []); },
@@ -415,13 +415,14 @@ function migrateProfile(profile) {
 const TOPIC_LIMIT = 100;
 function mergeTopics(existing, newTopics) {
   let arr = existing ? [...existing] : [];
+  // weight=1 の仮登録はループ前に一括整理（ループ内で当回追加分まで削除されないよう）
+  if (arr.length >= TOPIC_LIMIT) arr = arr.filter(t => t.weight > 1);
   for (const topicStr of newTopics) {
     if (!topicStr) continue;
     const idx = arr.findIndex(t => t.topic === topicStr);
     if (idx >= 0) {
       arr[idx] = { ...arr[idx], weight: Math.min(arr[idx].weight + 1, 10) };
     } else {
-      if (arr.length >= TOPIC_LIMIT) arr = arr.filter(t => t.weight > 1); // 仮登録を掃除
       // 全て weight>1 で容量が埋まっている場合は最小 weight のエントリを1つ退出させる
       if (arr.length >= TOPIC_LIMIT) {
         const minW = arr.reduce((m, t) => Math.min(m, t.weight), Infinity);
@@ -819,9 +820,9 @@ async function regenerateToday() {
   stopMainSpeak();
   const current = S.getCachedBroadcast(todayStr());
   if (current) {
-    S.addSeenTitles((current.news_items || []).map(n => n.title));
+    try { S.addSeenTitles((current.news_items || []).map(n => n.title)); } catch { /* ストレージ満杯時はスキップ */ }
     const companyTitles = (current.company_items || []).flatMap(({ items }) => items.map(n => n.title));
-    if (companyTitles.length) S.addCompanySeenTitles(companyTitles);
+    if (companyTitles.length) { try { S.addCompanySeenTitles(companyTitles); } catch { /* ストレージ満杯時はスキップ */ } }
   }
   S.delCachedBroadcast(todayStr());
   await loadToday();
@@ -903,7 +904,8 @@ async function startDuoPreview() {
   if (!S.apiKey) { showToast('APIキーが設定されていません'); return; }
 
   if (mainSpeaking) stopMainSpeak();
-  if (duoSpeaking) stopDuo();
+  if (duoSpeaking)  stopDuo();
+  if (chatSpeaking) { chatSpeaking = false; window.speechSynthesis.cancel(); if (currentChatBtn) { currentChatBtn.textContent = '▶ 読み上げ'; currentChatBtn = null; } }
 
   const btn = $('duo-preview-btn');
   btn.disabled = true;
@@ -1232,7 +1234,7 @@ function speakMainChunk() {
   if (voice) utt.voice = voice;
   const next  = () => { if (mainSpeaking) { mainChunkIdx++; setTimeout(speakMainChunk, 150); } };
   utt.onend   = next;
-  utt.onerror = next;
+  utt.onerror = (e) => { if (e?.error === 'interrupted') return; next(); };
   window.speechSynthesis.speak(utt);
 }
 
@@ -1317,6 +1319,7 @@ function showDeepDiveModal(newsIdx) {
     document.body.appendChild(modal);
   } else {
     modal.querySelector('h3').textContent = `「${title}」を深掘り`;
+    modal.querySelector('#deep-dive-input').value = '';
   }
 
   modal.dataset.newsIndex = newsIdx;
@@ -1412,6 +1415,8 @@ function readDeepDiveText(btn) {
   let idx = 0;
 
   stopMainSpeak();
+  if (chatSpeaking) { chatSpeaking = false; window.speechSynthesis.cancel(); if (currentChatBtn) { currentChatBtn.textContent = '▶ 読み上げ'; currentChatBtn = null; } }
+  if (duoSpeaking)  { duoSpeaking  = false; window.speechSynthesis.cancel(); $('duo-play-btn').textContent = '▶'; }
   resultDiv._playing = true;
   btn.textContent = '⏸ 停止';
 
