@@ -903,9 +903,7 @@ async function startDuoPreview() {
   if (!broadcast?.news_items?.length) { showToast('今日の放送がありません'); return; }
   if (!S.apiKey) { showToast('APIキーが設定されていません'); return; }
 
-  if (mainSpeaking) stopMainSpeak();
-  if (duoSpeaking)  stopDuo();
-  if (chatSpeaking) { chatSpeaking = false; window.speechSynthesis.cancel(); if (currentChatBtn) { currentChatBtn.textContent = '▶ 読み上げ'; currentChatBtn = null; } }
+  stopAllAudio();
 
   const btn = $('duo-preview-btn');
   btn.disabled = true;
@@ -1204,6 +1202,7 @@ function startMainSpeak() {
     showToast('このブラウザは読み上げに対応していません');
     return;
   }
+  stopAllAudio();
   mainSpeaking = true;
   $('play-btn').textContent = '⏸';
   acquireWakeLock();
@@ -1243,6 +1242,30 @@ function stopMainSpeak() {
   window.speechSynthesis.cancel();
   const btn = $('play-btn');
   if (btn) btn.textContent = '▶';
+  releaseWakeLock();
+  updateMediaSession('paused');
+}
+
+// 全プレイヤーを一括停止（新規プレイヤー起動時に呼ぶ）
+function stopAllAudio() {
+  mainSpeaking = false;
+  const playBtn = $('play-btn');
+  if (playBtn) playBtn.textContent = '▶';
+  duoSpeaking = false;
+  const duoBtn = $('duo-play-btn');
+  if (duoBtn) duoBtn.textContent = '▶';
+  if (chatSpeaking) {
+    chatSpeaking = false;
+    if (currentChatBtn) { currentChatBtn.textContent = '▶ 読み上げ'; currentChatBtn = null; }
+  }
+  document.querySelectorAll('.deep-dive-result').forEach(div => {
+    if (div._playing) {
+      div._playing = false;
+      const readBtn = div.querySelector('.deep-dive-read');
+      if (readBtn) readBtn.textContent = '▶ 読み上げ';
+    }
+  });
+  window.speechSynthesis.cancel();
   releaseWakeLock();
   updateMediaSession('paused');
 }
@@ -1414,9 +1437,7 @@ function readDeepDiveText(btn) {
   const voice = resolveVoice(cfg.voiceName);
   let idx = 0;
 
-  stopMainSpeak();
-  if (chatSpeaking) { chatSpeaking = false; window.speechSynthesis.cancel(); if (currentChatBtn) { currentChatBtn.textContent = '▶ 読み上げ'; currentChatBtn = null; } }
-  if (duoSpeaking)  { duoSpeaking  = false; window.speechSynthesis.cancel(); $('duo-play-btn').textContent = '▶'; }
+  stopAllAudio();
   resultDiv._playing = true;
   btn.textContent = '⏸ 停止';
 
@@ -1459,7 +1480,7 @@ function loadArchive() {
 }
 function loadDateBroadcast(date) {
   setHomeState('loading');
-  stopMainSpeak();
+  stopAllAudio();
 
   const cached = S.getCachedBroadcast(date);
   if (cached) { showPlayer(cached); return; }
@@ -1587,16 +1608,9 @@ function toggleChatSpeak(btn, script) {
     return;
   }
 
-  if (chatSpeaking) {
-    chatSpeaking = false;               // cancel より先にフラグを下げて旧ループを止める
-    window.speechSynthesis.cancel();
-    if (currentChatBtn) currentChatBtn.textContent = '▶ 読み上げ';
-    currentChatBtn = null;
-  }
-
   if (!window.speechSynthesis) { showToast('このブラウザは読み上げに対応していません'); return; }
 
-  stopMainSpeak();                      // メインプレイヤーと同時再生を防ぐ
+  stopAllAudio();                       // 他の全プレイヤーを停止
 
   chatSpeaking   = true;
   currentChatBtn = btn;
