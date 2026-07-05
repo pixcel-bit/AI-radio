@@ -1016,6 +1016,7 @@ function _initNoSleepVideo() {
   _noSleepVid = document.createElement('video');
   _noSleepVid.setAttribute('playsinline', '');
   _noSleepVid.setAttribute('muted', '');
+  _noSleepVid.setAttribute('aria-hidden', 'true');
   _noSleepVid.loop   = true;
   _noSleepVid.muted  = true;
   _noSleepVid.style.cssText = 'position:fixed;width:1px;height:1px;top:0;left:0;opacity:0.01;pointer-events:none;z-index:-1';
