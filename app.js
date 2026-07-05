@@ -769,11 +769,12 @@ async function loadToday() {
     items = selected;
     if (!items.length) items = allItems.slice(0, 5);
 
-    $('home-gen-msg').textContent = 'AIが放送原稿を作成中...';
-    const script = await generateScript(items, cfg);
-
     $('home-gen-msg').textContent = '担当企業ニュースを確認中...';
     const companyNewsMap = await fetchAllCompanyNews(allItems);
+
+    $('home-gen-msg').textContent = 'AIが放送原稿を作成中...';
+    const script = await generateScript(items, cfg, companyNewsMap.length > 0);
+
     let companyScript = '';
     if (companyNewsMap.length > 0) {
       $('home-gen-msg').textContent = '担当企業ニュースの原稿を作成中...';
@@ -828,7 +829,7 @@ async function regenerateToday() {
   await loadToday();
 }
 
-async function generateScript(items, cfg) {
+async function generateScript(items, cfg, hasCompanySection = false) {
   const timePerItem = cfg.timePerItem || 1;
   const lengthMin   = Math.round(items.length * timePerItem);
   const lengthText  = `約${lengthMin}分（${lengthMin * 160}字程度）`;
@@ -837,12 +838,15 @@ async function generateScript(items, cfg) {
   const intro      = cfg.customIntro ? `冒頭に必ず次の文を入れてください: 「${cfg.customIntro}」\n\n` : '';
   const customCats = (cfg.customCategories || []).filter(Boolean);
   const customLine = customCats.length ? `- カスタムテーマ「${customCats.join('・')}」に関するニュースは特に丁寧に紹介してください\n` : '';
+  const endingLine = hasCompanySection
+    ? `- この後に「担当企業ニュース」コーナーが続くため、締めの挨拶（「以上〜」など）は省き、最後のニュースを読んだらそのまま終わること\n`
+    : '';
 
   const system = `あなたはプロのラジオパーソナリティです。
 以下のニュース情報をもとに、${lengthText}のラジオ放送原稿を作成してください。
 トーンは${toneMap[cfg.tone] || toneMap.casual}口調です。
 ${intro}ルール:
-${customLine}- です・ます調で自然な話し言葉
+${customLine}${endingLine}- です・ます調で自然な話し言葉
 - 難しい用語は噛み砕いて説明
 - 出力は原稿テキストのみ（見出し・箇条書き・記号・マークダウン不要）
 - 数字は日本語の読みに合わせて表記（例: 2025年→二〇二五年、1兆円→一兆円）
