@@ -644,7 +644,7 @@ async function init() {
   // 画面復帰時: Wake Lock 再取得 + speechSynthesis が一時停止していれば再開
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      if (_generating || mainSpeaking || duoSpeaking) acquireWakeLock();
+      if (_generating || mainSpeaking || duoSpeaking || chatSpeaking) acquireWakeLock();
       if (mainSpeaking && window.speechSynthesis?.paused) window.speechSynthesis.resume();
     }
   });
@@ -1246,7 +1246,9 @@ function stopMainSpeak() {
   updateMediaSession('paused');
 }
 
-// 全プレイヤーを一括停止（新規プレイヤー起動時に呼ぶ）
+// 全プレイヤーのフラグとUIをリセットしてキャンセル
+// ウェイクロックはここでは触らない（新規プレイヤー起動の直前に呼ばれる場合、
+// すぐ再取得するので一度解除すると iOS で再取得に失敗するため）
 function stopAllAudio() {
   mainSpeaking = false;
   const playBtn = $('play-btn');
@@ -1266,8 +1268,6 @@ function stopAllAudio() {
     }
   });
   window.speechSynthesis.cancel();
-  releaseWakeLock();
-  updateMediaSession('paused');
 }
 
 function setMainSpeed(rate, btn) {
@@ -1481,6 +1481,8 @@ function loadArchive() {
 function loadDateBroadcast(date) {
   setHomeState('loading');
   stopAllAudio();
+  releaseWakeLock();
+  updateMediaSession('paused');
 
   const cached = S.getCachedBroadcast(date);
   if (cached) { showPlayer(cached); return; }
